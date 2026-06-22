@@ -1,49 +1,48 @@
-# ⚡ VFX Studio — AI Creative Suite (Phase 1 MVP)
+# VFX Studio
 
-<div align="center">
-  <img src="public/favicon.svg" width="120" alt="VFX Studio Logo" />
-  
-  ### *The Browser-Based Hollywood VFX & Architectural Visualization Engine*
+**The creative AI studio that works for you — not for a platform.**
 
-  [![React](https://img.shields.io/badge/React-19-blue?logo=react&logoColor=white)](https://react.dev)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-  [![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?logo=vite&logoColor=white)](https://vite.dev)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-  [![Fabric.js](https://img.shields.io/badge/Fabric.js-7.4-pink?logo=html5&logoColor=white)](https://fabricjs.com)
-  [![Zustand](https://img.shields.io/badge/Zustand-5.0-red?logo=react&logoColor=white)](https://github.com/pmndrs/zustand)
-  [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+Flow locks you to Google's model. Higgsfield locks you to theirs. Seedance locks you behind a SaaS wall. 
+**VFX Studio** connects your own API keys directly to the world's best generation models and routes each task to the right one automatically.
 
-  **Live Site:** [https://unrealumanga.github.io/vfx-studio/](https://unrealumanga.github.io/vfx-studio/)
-</div>
+One prompt. Every model. Zero subscriptions. Your data stays yours.
+
+👉 **[Open Live Studio](https://unrealumanga.github.io/vfx-studio/)**
 
 ---
 
-## 📽 Overview
+## ⚡ The Sovereign Alternative
 
-**VFX Studio** is a client-side, browser-only creative sandbox engineered for spatial designers, VFX artists, and AI prompt engineers who demand absolute control over model execution without SaaS walls, intermediate server storage, or monthly fees.
+VFX Studio is the first decentralized, browser-only workspace designed for spatial designers, VFX artists, and AI prompt engineers who want absolute data sovereignty, flat rate pricing, and multi-model flexibility in one session.
 
-By providing **your own API keys**, VFX Studio bypasses direct platform subscriptions and routes your prompts directly to leading-edge models (Google Imagen 3, Veo 2, OpenAI DALL·E 3, GPT-4o, Anthropic Claude, and Replicate Flux) through a stateless connection. All configurations are protected in a client-side AES-256-GCM KeyVault, ensuring absolute privacy.
+### 🎭 Flow & Seedance vs. VFX Studio
+
+| Flow / Higgsfield / Seedance | VFX Studio (The Conductor) |
+| :--- | :--- |
+| **Vendor Lock-In** — You use their model, their version, their cutoff. | **Total Sovereignty** — You decide when to use Imagen 3, Gemini 2.5/3.1, DALL·E 3, or Flux. |
+| **Privacy Drain** — Your prompts and assets are stored to train their systems. | **Zero Retention** — Your inputs go Browser → Provider API directly. None of it is saved. |
+| **Subscription Tax** — $20–$200/month flat fee, regardless of whether you generate. | **Zero Markup** — You pay only for what you render, directly to Google/Replicate at wholesale cost. |
+| **Rigid Output** — Locked to one generation style per session. | **Orchestrated Output** — Mix models seamlessly: Gemini for stills, Veo for motion, Claude for prompts. |
+| **Hostage Files** — Your project files live on their remote databases. | **Local Database** — Everything is stored in your local browser IndexedDB. You own 100% of your work. |
 
 ---
 
-## ✨ Features (Phase 1 MVP)
+## 🔮 The Five Core Powers
 
-### 🎨 1. Text-to-Image Generation (`Gen`)
-- Route prompts dynamically to Google Imagen 3, DALL-E 3, or Replicate Flux.
-- Set aspect ratios (`1:1`, `16:9`, `9:16`, `4:3`, `3:2`, `21:9`) and rendering qualities (`Draft`, `Standard`, `Ultra`).
+### 1. The Conductor, Not a Player 🎼
+Every other tool *is* a model. VFX Studio *orchestrates* them. It acts like a director picking the absolute best camera and lens for each shot—routing prompts dynamically to different providers based on task suitability.
 
-### ✂ 2. Interactive Inpaint Masking (`Edit`)
-- Powered by a GPU-accelerated **Fabric.js** editor.
-- Draw precise mask layers over reference images using a responsive pencil brush.
-- Automates solid white on solid black alpha mask exports for inpainting models on the fly.
+### 2. ArchViz as a First-Class Discipline 🏛
+No creative AI platform treats architectural visualization seriously. VFX Studio is custom-preset with specific **Gulf-context variables** (harsh midday sun, overcast detailing, biophilic timber, concrete brutalist, and terracotta/sandstone material focuses) built directly into a professional prompt-builder shell.
 
-### 🏛 3. First-Class Architectural Visualization (`ArchViz`)
-- Built for spatial and experiential designers.
-- Fine-tune renders with specialized dropdowns for **Camera Angles**, **Lighting & Time of Day**, and **Material Presets**.
-- Integrates selections with advanced prompt augmentation.
+### 3. Local-First Memory 💾
+Powered by local **IndexedDB** databases, your entire history—every render prompt, negative prompt, reference image, canvas mask, and exact generation seed—remains securely on your machine. No "expiring soon" cloud limits.
 
-### ✦ 4. Prompt Assist & Expansion (`Prompt`)
-- Harnesses Claude Sonnet 3.5 & GPT-4o to expand simple ideas into production-ready cinematic prompt structures with rich lighting and framing terminology.
+### 4. The Prompt is the Interface ✦
+A single detailed prompt drives the entire engine. The **Prompt Assist** feature leverages Anthropic's Claude 3.5 Sonnet and GPT-4o to expand simple conceptual ideas into cinematically precise prompt instructions.
+
+### 5. Client-Side Cryptography 🔒
+Your API keys are completely sealed in your browser's local storage using native **AES-256-GCM** encryption with PBKDF2 salt derivation. Keys are held decrypted in temporary system memory only during active browser sessions.
 
 ---
 
@@ -54,37 +53,6 @@ By providing **your own API keys**, VFX Studio bypasses direct platform subscrip
 - **GPU Canvas Editor:** Fabric.js 7.x (brush tracking and responsive image scaling).
 - **Decentralized History:** IndexedDB (via the lightweight `idb` library).
 - **API Key Protection:** Browser Web Crypto API (AES-256-GCM encryption with PBKDF2 salt derivation).
-
----
-
-## 🔒 Security Architecture (Zero Trust)
-
-```
-                       ┌──────────────────────────────────────┐
-                       │       Browser (Local Storage)        │
-                       │                                      │
- ┌───────────────┐     │  ┌──────────────┐  ┌──────────────┐  │
- │  Passphrase  ─┼─────┼─►│  AES-256-GCM │  │  Zustand VM  │  │
- └───────────────┘     │  │  Decryption  │  │ (Keys Store) │  │
-                       │  └──────┬───────┘  └──────┬───────┘  │
-                       └─────────┼─────────────────┼──────────┘
-                                 ▼                 ▼
-                       ┌──────────────────────────────────────┐
-                       │        Direct Provider Fetch         │
-                       │  (Authorization Bearer / Headers)    │
-                       └─────────────────┬────────────────────┘
-                                         │
-                 ┌───────────────────────┼──────────────────────┐
-                 ▼                       ▼                      ▼
-         ┌───────────────┐       ┌───────────────┐      ┌───────────────┐
-         │   Google AI   │       │    OpenAI     │      │   Replicate   │
-         │  (Imagen/Veo) │       │ (DALL-E/GPT)  │      │ (Flux/ESRGAN) │
-         └───────────────┘       └───────────────┘      └───────────────┘
-```
-
-- **In-Memory Keys:** Stored API keys are never held in plaintext on disk. They reside encrypted using AES-256-GCM in localStorage.
-- **Passphrase Locked:** Keys are only decrypted in-memory during active sessions.
-- **CORS Passthrough:** Includes a stateless, serverless Cloudflare Worker proxy (`workers/cors-proxy.ts`) only for APIs that block direct browser CORS. It does not log, track, or save keys.
 
 ---
 
@@ -104,8 +72,7 @@ bun run dev
 ```
 Open [http://localhost:5173/vfx-studio/](http://localhost:5173/vfx-studio/) in your browser.
 
-### 3. Build & Production Check
-Verify type safety and compile chunks:
+### 3. Build Production Bundle
 ```bash
 bun run build
 ```
@@ -114,9 +81,7 @@ bun run build
 
 ## 🌐 SEO & Web Discovery
 
-To help researchers, developers, and visual artists find this project, the repository is optimized with the following index tags:
-
-`vfx-studio` · `creative-tech` · `generative-ai` · `archviz` · `fabricjs` · `react-ai` · `google-imagen` · `veo2` · `dalle3` · `replicate-flux` · `prompt-engineering` · `aes-256-gcm` · `client-side-inference` · `web-vfx` · `unreal-engine`
+`vfx-studio` · `creative-tech` · `generative-ai` · `archviz` · `fabricjs` · `react-ai` · `google-imagen` · `veo2` · `dalle3` · `replicate-flux` · `prompt-engineering` · `aes-256-gcm` · `client-side-inference` · `web-vfx` · `unreal-engine` · `sovereign-ai` · `byok`
 
 ---
 
