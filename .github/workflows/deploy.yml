@@ -20,23 +20,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
+          bun-version: latest
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Type check
-        run: pnpm type-check
+        run: bun run type-check
 
       - name: Build
-        run: pnpm build
+        run: bun run build
 
       - uses: actions/upload-pages-artifact@v3
         with:
