@@ -202,17 +202,11 @@ async function upscaleWithGemini(
   return extractImageResult(await res.json(), model, start);
 }
 
-// ── Video Generation (via CORS proxy — required for browser) ──
+// ── Video Generation (Direct Browser Calls — No Proxy Required) ──
 async function generateVideo(
   req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
-  const proxyUrl = import.meta.env.VITE_PROXY_URL || '';
   const veoBase  = 'https://generativelanguage.googleapis.com/v1beta';
-
-  const buildProxied = (path: string) =>
-    proxyUrl
-      ? `${proxyUrl}?target=${encodeURIComponent(veoBase + path)}`
-      : `${veoBase}${path}`;
 
   const instances: Record<string, unknown> = {
     prompt: req.prompt,
@@ -243,12 +237,11 @@ async function generateVideo(
 
   try {
     const initRes = await fetch(
-      buildProxied(`/models/${VEO_MODEL}:predictLongRunning`),
+      `${veoBase}/models/${VEO_MODEL}:predictLongRunning?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
         },
         body: JSON.stringify(body),
       }
@@ -264,8 +257,10 @@ async function generateVideo(
 
     for (let i = 0; i < 60; i++) {
       await sleep(5000);
-      const pollRes = await fetch(buildProxied(`/${operationName}`), {
-        headers: { 'x-goog-api-key': apiKey },
+      const pollRes = await fetch(`${veoBase}/${operationName}?key=${apiKey}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       const op = await pollRes.json();
       if (op.done) {
@@ -287,7 +282,7 @@ async function generateVideo(
     throw new Error('Veo: timed out after 5 minutes');
   } catch (e: any) {
     if (e instanceof TypeError || String(e).includes('fetch') || String(e).includes('NetworkError')) {
-      throw new Error(`Veo video generation requires a CORS proxy because Google's Veo API does not allow browser-direct requests. Please deploy your stateless CORS proxy by running: "npx wrangler deploy workers/cors-proxy.ts --name vfx-studio-proxy" in the project directory, and ensure the deployed worker URL is configured in your vite.config.ts.`);
+      throw new Error(`Veo video generation failed to connect to Google API: ${e.message || e}. Ensure your internet connection is active and your API key has access to the Veo model in AI Studio.`);
     }
     throw e;
   }
