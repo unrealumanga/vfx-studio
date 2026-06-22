@@ -5,6 +5,11 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: '/vfx-studio/',
+  define: {
+    'import.meta.env.VITE_PROXY_URL': JSON.stringify(
+      'https://vfx-studio-proxy.unrealumanga.workers.dev'
+    ),
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,

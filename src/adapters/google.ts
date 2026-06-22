@@ -1,20 +1,44 @@
-// src/adapters/google.ts
-// Updated June 2026 — Imagen deprecated, all routes now use Nano Banana (Gemini image models)
+// src/adapters/google.ts — Full replacement
 
 import type { BaseAdapter, GenerationRequest, GenerationResult } from './_base';
 
-// Nano Banana = gemini-2.5-flash-image — the current Google image model
-const NANO_BANANA       = 'gemini-2.5-flash-image';
-const GEMINI_PRO_IMAGE  = 'gemini-3.1-flash-image-preview'; // ultra quality path
-const VEO_2_MODEL       = 'veo-2.0-generate-001';
-const BASE_URL          = 'https://generativelanguage.googleapis.com/v1beta/models';
+// ── Model roster ──────────────────────────────────────────────
+export const GOOGLE_IMAGE_MODELS = {
+  'nano-banana':     'gemini-2.5-flash-image',          // fast, economical
+  'nano-banana-2':   'gemini-3.1-flash-image-preview',  // default, best balance
+  'nano-banana-pro': 'gemini-3-pro-image-preview',      // studio quality
+} as const;
+
+export type GoogleImageModel = keyof typeof GOOGLE_IMAGE_MODELS;
+
+// Model used when quality is not overridden
+const DEFAULT_IMAGE_MODEL: GoogleImageModel = 'nano-banana-2';
+
+// Veo video model (current GA)
+const VEO_MODEL     = 'veo-2.0-generate-001';
+
+const GEMINI_BASE   = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+// ── Quality → model mapping ───────────────────────────────────
+function pickImageModel(req: GenerationRequest): string {
+  // Explicit override via metadata (set by model picker UI)
+  const override = req.metadata?.googleModel as GoogleImageModel | undefined;
+  if (override && GOOGLE_IMAGE_MODELS[override]) {
+    return GOOGLE_IMAGE_MODELS[override];
+  }
+  // Quality mapping
+  if (req.quality === 'ultra') return GOOGLE_IMAGE_MODELS['nano-banana-pro'];
+  if (req.quality === 'draft') return GOOGLE_IMAGE_MODELS['nano-banana'];
+  return GOOGLE_IMAGE_MODELS[DEFAULT_IMAGE_MODEL];
+}
 
 export const googleAdapter: BaseAdapter = {
   provider: 'google',
-  displayName: 'Google AI (Nano Banana · Veo 2)',
+  displayName: 'Google AI (Nano Banana)',
 
   capabilities: {
-    tasks: ['image-gen', 'image-edit', 'video-gen', 'archviz', 'style-transfer', 'prompt-assist'],
+    tasks: ['image-gen', 'image-edit', 'video-gen', 'archviz',
+            'style-transfer', 'upscale', 'prompt-assist'],
     maxImageWidth: 4096,
     maxImageHeight: 4096,
     supportsVideo: true,
@@ -26,16 +50,19 @@ export const googleAdapter: BaseAdapter = {
 
   async generate(req: GenerationRequest, apiKey: string): Promise<GenerationResult> {
     const start = Date.now();
-    if (req.task === 'video-gen') return generateVideo(req, apiKey, start);
+    if (req.task === 'video-gen')   return generateVideo(req, apiKey, start);
     if (req.task === 'prompt-assist') return assistWithGemini(req, apiKey, start);
-    if (req.task === 'image-edit' && req.referenceImage) return editImage(req, apiKey, start);
+    if (req.task === 'upscale')     return upscaleWithGemini(req, apiKey, start);
+    if (req.task === 'image-edit' && req.referenceImage) {
+      return editImage(req, apiKey, start);
+    }
     return generateImage(req, apiKey, start);
   },
 
   async validateKey(apiKey: string): Promise<boolean> {
     try {
       const res = await fetch(
-        `${BASE_URL}/${NANO_BANANA}:generateContent?key=${apiKey}`,
+        `${GEMINI_BASE}/${GOOGLE_IMAGE_MODELS['nano-banana-2']}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -46,33 +73,29 @@ export const googleAdapter: BaseAdapter = {
         }
       );
       return res.ok;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   },
 };
 
 // ── Image Generation ──────────────────────────────────────────
 async function generateImage(
-  req: GenerationRequest,
-  apiKey: string,
-  start: number
+  req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
-  // Ultra quality → use preview pro model, otherwise Nano Banana
-  const model = req.quality === 'ultra' ? GEMINI_PRO_IMAGE : NANO_BANANA;
+  const model = pickImageModel(req);
 
   const body = {
     contents: [{
-      parts: [{ text: req.prompt + (req.negativePrompt ? `. Avoid: ${req.negativePrompt}` : '') }],
+      parts: [{
+        text: req.prompt + (req.negativePrompt ? `. Avoid: ${req.negativePrompt}` : ''),
+      }],
     }],
     generationConfig: {
       responseModalities: ['IMAGE', 'TEXT'],
-      // aspectRatio supported on Nano Banana
       ...(req.aspectRatio && { aspectRatio: req.aspectRatio }),
     },
   };
 
-  const res = await fetch(`${BASE_URL}/${model}:generateContent?key=${apiKey}`, {
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -80,24 +103,20 @@ async function generateImage(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Google image gen error: ${err?.error?.message ?? res.statusText}`);
+    throw new Error(`Google (${model}) error: ${(err as any)?.error?.message ?? res.statusText}`);
   }
 
-  return extractImageResult(await res.json(), model, 'google', start);
+  return extractImageResult(await res.json(), model, start);
 }
 
 // ── Image Editing ─────────────────────────────────────────────
 async function editImage(
-  req: GenerationRequest,
-  apiKey: string,
-  start: number
+  req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
-  const model = req.quality === 'ultra' ? GEMINI_PRO_IMAGE : NANO_BANANA;
-
+  const model = pickImageModel(req);
   const imageB64  = await blobToBase64(req.referenceImage!);
   const imageMime = req.referenceImage!.type || 'image/png';
 
-  // Build parts — image first, then optional mask, then instruction
   const parts: unknown[] = [
     { inline_data: { mime_type: imageMime, data: imageB64 } },
   ];
@@ -106,23 +125,20 @@ async function editImage(
     const maskB64 = await blobToBase64(req.maskImage);
     parts.push({ inline_data: { mime_type: 'image/png', data: maskB64 } });
     parts.push({
-      text: `Edit only the masked/highlighted area: ${req.prompt}. Preserve everything outside the mask exactly as it is.`,
+      text: `Edit only the masked area: ${req.prompt}. Preserve everything outside the mask.`,
     });
   } else {
     parts.push({
-      text: `Edit this image: ${req.prompt}. Maintain the overall composition and style.`,
+      text: `Edit this image: ${req.prompt}. Maintain overall composition and style.`,
     });
   }
 
   const body = {
     contents: [{ role: 'user', parts }],
-    generationConfig: {
-      responseModalities: ['IMAGE', 'TEXT'],
-      temperature: 0.4,
-    },
+    generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 0.4 },
   };
 
-  const res = await fetch(`${BASE_URL}/${model}:generateContent?key=${apiKey}`, {
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -130,17 +146,141 @@ async function editImage(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Google image edit error: ${err?.error?.message ?? res.statusText}`);
+    throw new Error(`Google edit error: ${(err as any)?.error?.message ?? res.statusText}`);
   }
 
-  return extractImageResult(await res.json(), model, 'google', start);
+  return extractImageResult(await res.json(), model, start);
+}
+
+// ── Upscale (via Nano Banana img2img) ────────────────────────
+async function upscaleWithGemini(
+  req: GenerationRequest, apiKey: string, start: number
+): Promise<GenerationResult> {
+  if (!req.referenceImage) throw new Error('Upscale requires an input image.');
+  const model = GOOGLE_IMAGE_MODELS['nano-banana-pro'];
+
+  const imageB64  = await blobToBase64(req.referenceImage);
+  const imageMime = req.referenceImage.type || 'image/png';
+
+  const body = {
+    contents: [{
+      role: 'user',
+      parts: [
+        { inline_data: { mime_type: imageMime, data: imageB64 } },
+        {
+          text: req.prompt
+            ? `Enhance and upscale this image with higher detail and resolution: ${req.prompt}`
+            : 'Enhance and upscale this image. Increase detail, sharpness, and resolution. Preserve the original composition and style exactly.',
+        },
+      ],
+    }],
+    generationConfig: {
+      responseModalities: ['IMAGE', 'TEXT'],
+      temperature: 0.2,
+    },
+  };
+
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Google upscale error: ${(err as any)?.error?.message ?? res.statusText}`);
+  }
+
+  return extractImageResult(await res.json(), model, start);
+}
+
+// ── Video Generation (via CORS proxy — required for browser) ──
+async function generateVideo(
+  req: GenerationRequest, apiKey: string, start: number
+): Promise<GenerationResult> {
+  const proxyUrl = (import.meta as any).env?.VITE_PROXY_URL ?? '';
+  const veoBase  = 'https://generativelanguage.googleapis.com/v1beta';
+
+  const buildProxied = (path: string) =>
+    proxyUrl
+      ? `${proxyUrl}?target=${encodeURIComponent(veoBase + path)}`
+      : `${veoBase}${path}`;
+
+  const instances: Record<string, unknown> = {
+    prompt: req.prompt,
+  };
+
+  if (req.referenceImage) {
+    instances['image'] = {
+      bytesBase64Encoded: await blobToBase64(req.referenceImage),
+      mimeType: req.referenceImage.type || 'image/png',
+    };
+  }
+
+  if (req.styleImage) {
+    instances['lastFrame'] = {
+      bytesBase64Encoded: await blobToBase64(req.styleImage),
+      mimeType: req.styleImage.type || 'image/png',
+    };
+  }
+
+  const body = {
+    instances: [instances],
+    parameters: {
+      durationSeconds: req.duration ?? 8,
+      aspectRatio: req.aspectRatio ?? '16:9',
+      sampleCount: 1,
+    },
+  };
+
+  const initRes = await fetch(
+    buildProxied(`/models/${VEO_MODEL}:predictLongRunning`),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!initRes.ok) {
+    const err = await initRes.json().catch(() => ({}));
+    throw new Error(`Veo init error: ${(err as any)?.error?.message ?? initRes.statusText}`);
+  }
+
+  const operation = await initRes.json();
+  const operationName: string = operation.name;
+
+  for (let i = 0; i < 60; i++) {
+    await sleep(5000);
+    const pollRes = await fetch(buildProxied(`/${operationName}`), {
+      headers: { 'x-goog-api-key': apiKey },
+    });
+    const op = await pollRes.json();
+    if (op.done) {
+      const videoUri =
+        op?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
+        ?? op?.response?.videos?.[0]?.uri;
+      if (!videoUri) throw new Error('Veo: no video URI in response');
+      return {
+        type: 'video',
+        url: videoUri,
+        model: VEO_MODEL,
+        provider: 'google',
+        durationMs: Date.now() - start,
+      };
+    }
+    if (op.error) throw new Error(`Veo generation failed: ${op.error.message}`);
+  }
+
+  throw new Error('Veo: timed out after 5 minutes');
 }
 
 // ── Prompt Assist ─────────────────────────────────────────────
 async function assistWithGemini(
-  req: GenerationRequest,
-  apiKey: string,
-  start: number
+  req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
   const body = {
     system_instruction: {
@@ -155,14 +295,9 @@ Return only the expanded prompt — no preamble, under 200 words.`,
     generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
   };
 
-  // Use text-only Gemini Flash for prompt assist — no image model needed
   const res = await fetch(
-    `${BASE_URL}/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }
+    `${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
   );
 
   if (!res.ok) throw new Error(`Gemini prompt assist error: ${res.statusText}`);
@@ -170,93 +305,35 @@ Return only the expanded prompt — no preamble, under 200 words.`,
   const refined = data.candidates?.[0]?.content?.parts?.[0]?.text ?? req.prompt;
 
   return {
-    type: 'image',
-    model: 'gemini-2.5-flash',
-    provider: 'google',
-    durationMs: Date.now() - start,
-    metadata: { refinedPrompt: refined },
-  };
-}
-
-// ── Video Generation ──────────────────────────────────────────
-async function generateVideo(
-  req: GenerationRequest,
-  apiKey: string,
-  start: number
-): Promise<GenerationResult> {
-  const body = {
-    model: VEO_2_MODEL,
-    prompt: { text: req.prompt },
-    generationConfig: {
-      durationSeconds: req.duration ?? 8,
-      aspectRatio: req.aspectRatio ?? '16:9',
-    },
-  };
-
-  const initRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/${VEO_2_MODEL}:generateVideo?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-  );
-
-  if (!initRes.ok) throw new Error(`Veo 2 init error: ${initRes.statusText}`);
-  const operation = await initRes.json();
-  const result = await pollOperation(operation.name, apiKey);
-  const response = result?.response as { videos?: Array<{ uri: string }> } | undefined;
-  const videoUri = response?.videos?.[0]?.uri;
-  if (!videoUri) throw new Error('Veo 2: no video in response');
-
-  return {
-    type: 'video',
-    url: videoUri,
-    model: VEO_2_MODEL,
-    provider: 'google',
-    durationMs: Date.now() - start,
+    type: 'image', model: 'gemini-2.5-flash', provider: 'google',
+    durationMs: Date.now() - start, metadata: { refinedPrompt: refined },
   };
 }
 
 // ── Shared helpers ────────────────────────────────────────────
-
 function extractImageResult(
-  data: Record<string, unknown>,
-  model: string,
-  provider: string,
-  start: number
+  data: unknown, model: string, start: number
 ): GenerationResult {
   const parts = (data as any).candidates?.[0]?.content?.parts ?? [];
-
   const imagePart = parts.find(
-    (p: Record<string, unknown>) => p.inlineData || p.inline_data
+    (p: any) => p.inlineData || p.inline_data
   );
   const inlineData = imagePart?.inlineData ?? imagePart?.inline_data;
 
   if (inlineData?.data) {
-    const blob = base64ToBlob(inlineData.data, inlineData.mimeType ?? inlineData.mime_type ?? 'image/png');
-    return { type: 'image', blob, model, provider, durationMs: Date.now() - start };
+    const blob = base64ToBlob(
+      inlineData.data,
+      inlineData.mimeType ?? inlineData.mime_type ?? 'image/png'
+    );
+    return { type: 'image', blob, model, provider: 'google', durationMs: Date.now() - start };
   }
 
-  // No image returned — surface text if any
-  const textPart = parts.find((p: Record<string, unknown>) => p.text);
+  const textPart = parts.find((p: any) => p.text);
   throw new Error(
     textPart?.text
       ? `Model returned text only: ${textPart.text}`
-      : 'Google: no image in response. Check your API key has image generation enabled at aistudio.google.com'
+      : 'Google: no image in response. Ensure image generation is enabled in AI Studio.'
   );
-}
-
-async function pollOperation(
-  operationName: string,
-  apiKey: string,
-  maxAttempts = 60
-): Promise<Record<string, unknown>> {
-  for (let i = 0; i < maxAttempts; i++) {
-    await sleep(3000);
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/${operationName}?key=${apiKey}`
-    );
-    const op = await res.json();
-    if (op.done) return op;
-  }
-  throw new Error('Veo 2: timed out');
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -275,6 +352,4 @@ function base64ToBlob(b64: string, mimeType: string): Blob {
   return new Blob([arr], { type: mimeType });
 }
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }

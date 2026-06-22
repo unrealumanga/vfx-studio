@@ -19,7 +19,7 @@ const TASK_PRIORITY: Record<Task, ProviderKey[]> = {
   'video-gen':      ['google', 'runway', 'fal'],
   'vfx-compose':    ['runway', 'fal', 'replicate'],
   'archviz':        ['google', 'replicate', 'fal'],
-  'upscale':        ['replicate', 'fal'],
+  'upscale':        ['google', 'replicate', 'fal'],
   'style-transfer': ['replicate', 'google', 'fal'],
   'prompt-assist':  ['anthropic', 'openai', 'google'],
 };

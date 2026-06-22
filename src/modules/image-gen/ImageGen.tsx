@@ -4,7 +4,7 @@ import { pickAdapter } from '../../utils/router';
 import { useKeysStore } from '../../store/keys.store';
 
 export default function ImageGen() {
-  const { aspectRatio, setAspectRatio, quality, setQuality, overrideProvider } = useSessionStore();
+  const { aspectRatio, setAspectRatio, quality, setQuality, overrideProvider, googleModel, setGoogleModel } = useSessionStore();
   const keys = useKeysStore((s) => s.keys);
   let resolved: string | null = null;
   try {
@@ -48,6 +48,21 @@ export default function ImageGen() {
           <option value="ultra">Ultra (HD)</option>
         </select>
       </div>
+
+      {resolved === 'google' && (
+        <div>
+          <label className="text-studio-muted text-xs font-mono block mb-1">Google Model</label>
+          <select
+            value={googleModel}
+            onChange={(e) => setGoogleModel(e.target.value)}
+            className="w-full bg-studio-bg border border-studio-border rounded px-2 py-1.5 text-studio-text text-xs font-mono outline-none focus:border-studio-accent"
+          >
+            <option value="nano-banana">Nano Banana (fast)</option>
+            <option value="nano-banana-2">Nano Banana 2 (default)</option>
+            <option value="nano-banana-pro">Nano Banana Pro (studio quality)</option>
+          </select>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button

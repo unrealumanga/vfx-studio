@@ -9,6 +9,7 @@ interface SessionState {
   quality: 'draft' | 'standard' | 'ultra';
   referenceImage: Blob | null;
   maskImage: Blob | null;
+  styleImage: Blob | null;
   currentResult: GenerationResult | null;
   isGenerating: boolean;
   progress: number;
@@ -20,6 +21,12 @@ interface SessionState {
   archvizTimeOfDay: string;
   archvizMaterialStyle: string;
 
+  // Google Model Override
+  googleModel: string;
+
+  // Video Duration State
+  _videoDuration: number;
+
   setActiveTask: (task: Task) => void;
   setPrompt: (p: string) => void;
   setNegativePrompt: (p: string) => void;
@@ -27,6 +34,7 @@ interface SessionState {
   setQuality: (q: 'draft' | 'standard' | 'ultra') => void;
   setReferenceImage: (b: Blob | null) => void;
   setMaskImage: (b: Blob | null) => void;
+  setStyleImage: (b: Blob | null) => void;
   setResult: (r: GenerationResult) => void;
   setGenerating: (v: boolean, progress?: number) => void;
   setError: (e: string | null) => void;
@@ -34,6 +42,8 @@ interface SessionState {
   setArchvizCameraAngle: (v: string) => void;
   setArchvizTimeOfDay: (v: string) => void;
   setArchvizMaterialStyle: (v: string) => void;
+  setGoogleModel: (v: string) => void;
+  setVideoDuration: (v: number) => void;
   buildRequest: () => GenerationRequest;
 }
 
@@ -45,6 +55,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   quality: 'standard',
   referenceImage: null,
   maskImage: null,
+  styleImage: null,
   currentResult: null,
   isGenerating: false,
   progress: 0,
@@ -56,6 +67,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   archvizTimeOfDay: 'golden-hour',
   archvizMaterialStyle: 'concrete-glass',
 
+  // Google Model Default
+  googleModel: 'nano-banana-2',
+
+  // Video Duration Default
+  _videoDuration: 8,
+
   setActiveTask: (activeTask) => set({ activeTask }),
   setPrompt: (prompt) => set({ prompt }),
   setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
@@ -63,6 +80,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setQuality: (quality) => set({ quality }),
   setReferenceImage: (referenceImage) => set({ referenceImage }),
   setMaskImage: (maskImage) => set({ maskImage }),
+  setStyleImage: (styleImage) => set({ styleImage }),
   setResult: (currentResult) => set({ currentResult }),
   setGenerating: (isGenerating, progress = 0) => set({ isGenerating, progress }),
   setError: (error) => set({ error }),
@@ -70,6 +88,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setArchvizCameraAngle: (archvizCameraAngle) => set({ archvizCameraAngle }),
   setArchvizTimeOfDay: (archvizTimeOfDay) => set({ archvizTimeOfDay }),
   setArchvizMaterialStyle: (archvizMaterialStyle) => set({ archvizMaterialStyle }),
+  setGoogleModel: (googleModel) => set({ googleModel }),
+  setVideoDuration: (_videoDuration) => set({ _videoDuration }),
 
   buildRequest: (): GenerationRequest => {
     const s = get();
@@ -78,9 +98,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       negativePrompt: s.negativePrompt || undefined,
       referenceImage: s.referenceImage ?? undefined,
       maskImage: s.maskImage ?? undefined,
+      styleImage: s.styleImage ?? undefined,
       aspectRatio: s.aspectRatio as GenerationRequest['aspectRatio'],
       quality: s.quality,
       task: s.activeTask,
+      duration: s._videoDuration,
+      metadata: {
+        googleModel: s.googleModel,
+      },
     };
   },
 }));

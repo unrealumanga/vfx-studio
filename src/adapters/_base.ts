@@ -30,6 +30,7 @@ export interface GenerationRequest {
   style?: string;
   cameraMotion?: string;
   task: Task;
+  metadata?: Record<string, unknown>;
 }
 
 export interface GenerationResult {
