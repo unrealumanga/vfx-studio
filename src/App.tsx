@@ -73,23 +73,41 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-studio-bg">
-      <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />
-
-      <div className="px-4 pt-3 pb-2">
-        <PromptBar onGenerate={handleGenerate} />
+    <div className="h-screen flex flex-col relative overflow-hidden text-studio-text select-none">
+      {/* 🎭 Ambient Living backdrops */}
+      <div className="ambient-container">
+        <div className="ambient-orb-1" />
+        <div className="ambient-orb-2" />
+        <div className="ambient-orb-3" />
       </div>
 
-      <div className="flex-1 flex gap-4 px-4 pb-2 min-h-0">
-        <div className="flex-1 bg-studio-surface border border-studio-border rounded-lg overflow-hidden">
-          <ResultCanvas />
+      <div className="relative z-10 flex flex-col h-full">
+        <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />
+
+        <div className="px-4 pt-3 pb-2 animate-slide-up">
+          <PromptBar onGenerate={handleGenerate} />
         </div>
-        <div className="w-56 shrink-0 bg-studio-surface border border-studio-border rounded-lg p-3 overflow-y-auto">
-          {renderModuleControls()}
+
+        <div className="flex-1 flex gap-4 px-4 pb-2 min-h-0">
+          <div 
+            className="flex-1 glass-panel rounded-lg overflow-hidden animate-slide-up"
+            style={{ animationDelay: '100ms' }}
+          >
+            <ResultCanvas />
+          </div>
+          <div 
+            className="w-56 shrink-0 glass-panel rounded-lg p-3 overflow-y-auto animate-slide-up"
+            style={{ animationDelay: '200ms' }}
+          >
+            {renderModuleControls()}
+          </div>
+        </div>
+
+        <div className="animate-slide-up" style={{ animationDelay: '300ms' }}>
+          <HistoryStrip />
         </div>
       </div>
 
-      <HistoryStrip />
       <KeyVault open={keyVaultOpen} onClose={() => setKeyVaultOpen(false)} />
     </div>
   );

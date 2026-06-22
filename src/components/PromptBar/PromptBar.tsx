@@ -51,7 +51,11 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
 
   return (
     <div className="relative">
-      <div className={`relative flex items-end gap-2 bg-studio-surface border border-studio-border rounded-lg p-3 transition-all ${isGenerating ? 'shadow-[0_0_20px_rgba(124,109,255,0.3)] border-studio-accent' : ''}`}>
+      <div 
+        className={`relative flex items-end gap-2 glass-panel rounded-lg p-3 transition-all duration-300 ${
+          isGenerating ? 'glow-pulse-active scale-[1.005]' : ''
+        }`}
+      >
         <textarea
           ref={textareaRef}
           value={prompt}
@@ -70,7 +74,7 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           <button
             onClick={handleExpandPrompt}
             disabled={isExpanding || !prompt.trim()}
-            className="text-studio-muted hover:text-studio-accent transition-colors text-sm font-medium disabled:opacity-40 px-2 py-1 rounded hover:bg-studio-border"
+            className="interactive-btn text-studio-muted hover:text-studio-accent transition-colors text-sm font-medium disabled:opacity-40 px-2 py-1.5 rounded hover:bg-studio-border"
             title="Expand prompt with AI assistance"
           >
             {isExpanding ? '...' : '✦'}
@@ -78,7 +82,7 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           <button
             onClick={handleGenerate}
             disabled={!prompt.trim() || isGenerating}
-            className="bg-studio-accent hover:bg-studio-accent-dim disabled:opacity-40 disabled:cursor-not-allowed text-white font-display font-medium px-5 py-2 rounded-full text-sm transition-all"
+            className="interactive-btn bg-studio-accent hover:bg-studio-accent-dim disabled:opacity-40 disabled:cursor-not-allowed text-white font-display font-medium px-5 py-2 rounded-full text-sm transition-all"
           >
             {isGenerating ? 'Generating...' : 'Generate'}
           </button>

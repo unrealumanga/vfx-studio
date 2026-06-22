@@ -6,12 +6,26 @@ export default function ResultCanvas() {
 
   if (isGenerating) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="w-24 h-24 mx-auto rounded-lg bg-gradient-to-r from-studio-surface via-studio-accent/20 to-studio-surface animate-shimmer bg-[length:200%_100%]" />
-          <p className="text-studio-muted text-sm mt-3 font-mono">
-            {progress > 0 ? `${Math.round(progress * 100)}%` : 'Generating...'}
-          </p>
+      <div className="flex flex-col items-center justify-center h-full relative overflow-hidden bg-black/40">
+        <div className="hud-scanline" />
+
+        <div className="text-center relative z-10 space-y-4">
+          <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+            <svg className="absolute inset-0 w-full h-full animate-[spin_8s_linear_infinite]" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" stroke="#7c6dff" strokeWidth="1.5" strokeDasharray="10 30" fill="transparent" strokeLinecap="round" />
+            </svg>
+            <svg className="absolute inset-0 w-full h-full animate-[spin_4s_linear_infinite_reverse]" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="35" stroke="#f5c842" strokeWidth="1" strokeDasharray="40 10" fill="transparent" opacity="0.6" />
+            </svg>
+            <div className="w-6 h-6 rounded-full bg-studio-accent animate-pulse shadow-[0_0_15px_#7c6dff]" />
+          </div>
+
+          <div className="space-y-1">
+            <h3 className="text-studio-text font-display font-medium text-xs tracking-wider uppercase">Orchestrating Models</h3>
+            <p className="text-studio-muted text-[10px] font-mono">
+              {progress > 0 ? `REPLICATING REGIMES: ${Math.round(progress * 100)}%` : 'DISPATCHING TO NEURAL PIPELINES...'}
+            </p>
+          </div>
         </div>
       </div>
     );
