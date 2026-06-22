@@ -198,7 +198,7 @@ async function upscaleWithGemini(
 async function generateVideo(
   req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
-  const proxyUrl = (import.meta as any).env?.VITE_PROXY_URL ?? '';
+  const proxyUrl = import.meta.env.VITE_PROXY_URL || '';
   const veoBase  = 'https://generativelanguage.googleapis.com/v1beta';
 
   const buildProxied = (path: string) =>

@@ -6,7 +6,7 @@ import { useKeysStore } from '../../store/keys.store';
 import { Canvas, Image as FabricImage, PencilBrush } from 'fabric';
 
 export default function ImageEdit() {
-  const { referenceImage, setReferenceImage, setMaskImage, overrideProvider } = useSessionStore();
+  const { referenceImage, setReferenceImage, setMaskImage, overrideProvider, googleModel, setGoogleModel } = useSessionStore();
   const keys = useKeysStore((s) => s.keys);
   const fileRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -127,6 +127,21 @@ export default function ImageEdit() {
       <div className="flex items-center gap-2">
         <ModelBadge currentProvider={resolved} />
       </div>
+
+      {resolved === 'google' && (
+        <div>
+          <label className="text-studio-muted text-xs font-mono block mb-1">Google Model</label>
+          <select
+            value={googleModel}
+            onChange={(e) => setGoogleModel(e.target.value)}
+            className="w-full bg-studio-bg border border-studio-border rounded px-2 py-1.5 text-studio-text text-xs font-mono outline-none focus:border-studio-accent"
+          >
+            <option value="nano-banana">Nano Banana (fast)</option>
+            <option value="nano-banana-2">Nano Banana 2 (default)</option>
+            <option value="nano-banana-pro">Nano Banana Pro (studio quality)</option>
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="text-studio-muted text-xs font-mono block mb-1">Reference Image</label>
