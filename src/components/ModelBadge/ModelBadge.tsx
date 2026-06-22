@@ -7,7 +7,7 @@ interface ModelBadgeProps {
 }
 
 const PROVIDER_NAMES: Record<string, string> = {
-  google: 'Google AI',
+  google: 'Google AI (Nano Banana)',
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   replicate: 'Replicate',
