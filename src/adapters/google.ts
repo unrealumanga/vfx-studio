@@ -83,15 +83,23 @@ async function generateImage(
 ): Promise<GenerationResult> {
   const model = pickImageModel(req);
 
+  // Append aspect ratio description to prompt for reliable layout across all models
+  let enhancedPrompt = req.prompt;
+  if (req.aspectRatio) {
+    enhancedPrompt += `. Aspect ratio: ${req.aspectRatio}.`;
+  }
+  if (req.negativePrompt) {
+    enhancedPrompt += ` Avoid: ${req.negativePrompt}`;
+  }
+
   const body = {
     contents: [{
       parts: [{
-        text: req.prompt + (req.negativePrompt ? `. Avoid: ${req.negativePrompt}` : ''),
+        text: enhancedPrompt,
       }],
     }],
     generationConfig: {
       responseModalities: ['IMAGE', 'TEXT'],
-      ...(req.aspectRatio && { aspectRatio: req.aspectRatio }),
     },
   };
 
@@ -233,49 +241,56 @@ async function generateVideo(
     },
   };
 
-  const initRes = await fetch(
-    buildProxied(`/models/${VEO_MODEL}:predictLongRunning`),
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify(body),
+  try {
+    const initRes = await fetch(
+      buildProxied(`/models/${VEO_MODEL}:predictLongRunning`),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!initRes.ok) {
+      const err = await initRes.json().catch(() => ({}));
+      throw new Error(`Veo init error: ${(err as any)?.error?.message ?? initRes.statusText}`);
     }
-  );
 
-  if (!initRes.ok) {
-    const err = await initRes.json().catch(() => ({}));
-    throw new Error(`Veo init error: ${(err as any)?.error?.message ?? initRes.statusText}`);
-  }
+    const operation = await initRes.json();
+    const operationName: string = operation.name;
 
-  const operation = await initRes.json();
-  const operationName: string = operation.name;
-
-  for (let i = 0; i < 60; i++) {
-    await sleep(5000);
-    const pollRes = await fetch(buildProxied(`/${operationName}`), {
-      headers: { 'x-goog-api-key': apiKey },
-    });
-    const op = await pollRes.json();
-    if (op.done) {
-      const videoUri =
-        op?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
-        ?? op?.response?.videos?.[0]?.uri;
-      if (!videoUri) throw new Error('Veo: no video URI in response');
-      return {
-        type: 'video',
-        url: videoUri,
-        model: VEO_MODEL,
-        provider: 'google',
-        durationMs: Date.now() - start,
-      };
+    for (let i = 0; i < 60; i++) {
+      await sleep(5000);
+      const pollRes = await fetch(buildProxied(`/${operationName}`), {
+        headers: { 'x-goog-api-key': apiKey },
+      });
+      const op = await pollRes.json();
+      if (op.done) {
+        const videoUri =
+          op?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
+          ?? op?.response?.videos?.[0]?.uri;
+        if (!videoUri) throw new Error('Veo: no video URI in response');
+        return {
+          type: 'video',
+          url: videoUri,
+          model: VEO_MODEL,
+          provider: 'google',
+          durationMs: Date.now() - start,
+        };
+      }
+      if (op.error) throw new Error(`Veo generation failed: ${op.error.message}`);
     }
-    if (op.error) throw new Error(`Veo generation failed: ${op.error.message}`);
-  }
 
-  throw new Error('Veo: timed out after 5 minutes');
+    throw new Error('Veo: timed out after 5 minutes');
+  } catch (e: any) {
+    if (e instanceof TypeError || String(e).includes('fetch') || String(e).includes('NetworkError')) {
+      throw new Error(`Veo video generation requires a CORS proxy because Google's Veo API does not allow browser-direct requests. Please deploy your stateless CORS proxy by running: "npx wrangler deploy workers/cors-proxy.ts --name vfx-studio-proxy" in the project directory, and ensure the deployed worker URL is configured in your vite.config.ts.`);
+    }
+    throw e;
+  }
 }
 
 // ── Prompt Assist ─────────────────────────────────────────────
