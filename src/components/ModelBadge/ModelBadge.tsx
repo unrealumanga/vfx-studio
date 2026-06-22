@@ -18,7 +18,8 @@ const PROVIDER_NAMES: Record<string, string> = {
 export default function ModelBadge({ currentProvider }: ModelBadgeProps) {
   const [open, setOpen] = useState(false);
   const { overrideProvider, setOverrideProvider } = useSessionStore();
-  const available = useKeysStore((s) => s.availableProviders());
+  const keys = useKeysStore((s) => s.keys);
+  const available = (Object.keys(keys) as Array<keyof typeof keys>).filter((k) => !!keys[k]);
 
   const display = overrideProvider
     ? PROVIDER_NAMES[overrideProvider] ?? overrideProvider
