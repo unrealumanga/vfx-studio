@@ -3,7 +3,7 @@ import { useSessionStore } from '../../store/session.store';
 import ModelBadge from '../../components/ModelBadge/ModelBadge';
 import { pickAdapter } from '../../utils/router';
 import { useKeysStore } from '../../store/keys.store';
-import { upscaleImage } from './upscale.service';
+import { upscaleImage, professionalFinish } from './upscale.service';
 
 export default function Upscale() {
   const { referenceImage, setReferenceImage, overrideProvider } = useSessionStore();
@@ -37,14 +37,24 @@ export default function Upscale() {
       </div>
 
       {referenceImage && (
-        <button
-          onClick={() => {
-            upscaleImage();
-          }}
-          className="w-full bg-studio-accent hover:bg-studio-accent-dim text-white font-display font-medium text-sm py-2 rounded-full transition-colors"
-        >
-          Upscale
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={() => upscaleImage()}
+            className="interactive-btn w-full bg-studio-accent hover:bg-studio-accent-dim text-white font-display font-medium text-sm py-2 rounded-full transition-colors shadow-[0_4px_15px_rgba(124,109,255,0.3)]"
+          >
+            Basic Upscale
+          </button>
+          
+          <button
+            onClick={() => professionalFinish()}
+            className="interactive-btn w-full bg-studio-gold hover:bg-yellow-500 text-studio-bg font-display font-medium text-sm py-2 rounded-full transition-colors shadow-[0_4px_15px_rgba(245,200,66,0.3)]"
+          >
+            ✨ Professional Finish Pipeline
+          </button>
+          <p className="text-studio-muted text-[10px] font-mono leading-relaxed mt-1">
+            Chain: Real-ESRGAN (4x) → GFPGAN (Sharpen) → Img2Img (Tone Grade). Requires Replicate API Key.
+          </p>
+        </div>
       )}
     </div>
   );

@@ -27,6 +27,10 @@ interface SessionState {
   // Video Duration State
   _videoDuration: number;
 
+  // Consistency Anchor
+  anchorSeed: number | null;
+  anchorImage: Blob | null;
+
   setActiveTask: (task: Task) => void;
   setPrompt: (p: string) => void;
   setNegativePrompt: (p: string) => void;
@@ -44,6 +48,7 @@ interface SessionState {
   setArchvizMaterialStyle: (v: string) => void;
   setGoogleModel: (v: string) => void;
   setVideoDuration: (v: number) => void;
+  setAnchor: (seed: number | null, img: Blob | null) => void;
   buildRequest: () => GenerationRequest;
 }
 
@@ -62,16 +67,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   error: null,
   overrideProvider: null,
 
-  // ArchViz Presets Default
   archvizCameraAngle: 'eye-level',
   archvizTimeOfDay: 'golden-hour',
   archvizMaterialStyle: 'concrete-glass',
 
-  // Google Model Default
   googleModel: 'nano-banana-2',
-
-  // Video Duration Default
   _videoDuration: 8,
+
+  anchorSeed: null,
+  anchorImage: null,
 
   setActiveTask: (activeTask) => set({ activeTask }),
   setPrompt: (prompt) => set({ prompt }),
@@ -90,19 +94,25 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setArchvizMaterialStyle: (archvizMaterialStyle) => set({ archvizMaterialStyle }),
   setGoogleModel: (googleModel) => set({ googleModel }),
   setVideoDuration: (_videoDuration) => set({ _videoDuration }),
+  setAnchor: (anchorSeed, anchorImage) => set({ anchorSeed, anchorImage }),
 
   buildRequest: (): GenerationRequest => {
     const s = get();
+    // Inject consistency anchor if present
+    const seed = s.anchorSeed ?? undefined;
+    const ref = s.activeTask === 'image-gen' ? (s.anchorImage ?? s.referenceImage ?? undefined) : (s.referenceImage ?? undefined);
+    
     return {
       prompt: s.prompt,
       negativePrompt: s.negativePrompt || undefined,
-      referenceImage: s.referenceImage ?? undefined,
+      referenceImage: ref,
       maskImage: s.maskImage ?? undefined,
       styleImage: s.styleImage ?? undefined,
       aspectRatio: s.aspectRatio as GenerationRequest['aspectRatio'],
       quality: s.quality,
       task: s.activeTask,
       duration: s._videoDuration,
+      seed,
       metadata: {
         googleModel: s.googleModel,
       },

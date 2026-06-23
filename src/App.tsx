@@ -11,8 +11,10 @@ import VfxCompose from './modules/vfx-compose/VfxCompose';
 import ArchViz from './modules/archviz/ArchViz';
 import Upscale from './modules/upscale/Upscale';
 import PromptAssist from './modules/prompt-assist/PromptAssist';
+import ModelTournament from './modules/model-tournament/ModelTournament';
 import { useSessionStore } from './store/session.store';
 import { useKeysStore } from './store/keys.store';
+import { usePromptStore } from './store/prompt.store';
 import { generateImage } from './modules/image-gen/imageGen.service';
 import { editImage } from './modules/image-edit/imageEdit.service';
 import { generateVideo } from './modules/video-gen/videoGen.service';
@@ -25,12 +27,15 @@ function App() {
   const [keyVaultOpen, setKeyVaultOpen] = useState(false);
   const { activeTask } = useSessionStore();
   const { availableProviders } = useKeysStore();
+  const initPromptStore = usePromptStore(s => s.init);
 
   useEffect(() => {
     const hasKeys = availableProviders().length > 0;
     if (!hasKeys) {
       setKeyVaultOpen(true);
     }
+    // Initialize embedding worker for prompt autocomplete
+    initPromptStore();
   }, []);
 
   const handleGenerate = () => {
@@ -56,6 +61,9 @@ function App() {
       case 'prompt-assist':
         assistPrompt();
         break;
+      case 'model-tournament':
+        // Tournament is handled inside the component
+        break;
     }
   };
 
@@ -68,6 +76,7 @@ function App() {
       case 'archviz': return <ArchViz />;
       case 'upscale': return <Upscale />;
       case 'prompt-assist': return <PromptAssist />;
+      case 'model-tournament': return <ModelTournament />;
       default: return <ImageGen />;
     }
   };

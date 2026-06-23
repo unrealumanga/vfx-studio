@@ -22,6 +22,7 @@ const TASK_PRIORITY: Record<Task, ProviderKey[]> = {
   'upscale':        ['google', 'replicate', 'fal'],
   'style-transfer': ['replicate', 'google', 'fal'],
   'prompt-assist':  ['anthropic', 'openai', 'google'],
+  'model-tournament': ['google', 'openai', 'replicate'],
 };
 
 export interface RouterResult {

@@ -6,7 +6,8 @@ export type Task =
   | 'archviz'
   | 'upscale'
   | 'style-transfer'
-  | 'prompt-assist';
+  | 'prompt-assist'
+  | 'model-tournament';
 
 export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:2' | '21:9';
 export type Quality = 'draft' | 'standard' | 'ultra';

@@ -9,6 +9,7 @@ const TOOLS: { id: Task; label: string }[] = [
   { id: 'archviz', label: 'ArchViz' },
   { id: 'upscale', label: '↑Scale' },
   { id: 'prompt-assist', label: 'Prompt' },
+  { id: 'model-tournament', label: '⚔️ Tourney' },
 ];
 
 interface ToolSwitcherProps {
