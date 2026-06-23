@@ -136,6 +136,22 @@ export default function ResultCanvas() {
     setActiveTask('image-edit');
   };
 
+  const handleSendToUpscale = async () => {
+    if (currentResult.blob) {
+      setReferenceImage(currentResult.blob);
+    } else if (currentResult.url && currentResult.type === 'image') {
+      try {
+        const res = await fetch(currentResult.url);
+        const blob = await res.blob();
+        setReferenceImage(blob);
+      } catch {
+        console.error('Could not send result to upscale module');
+        return;
+      }
+    }
+    setActiveTask('upscale');
+  };
+
   const handleSendToVideo = async () => {
     if (currentResult.blob) {
       setReferenceImage(currentResult.blob);
@@ -224,6 +240,9 @@ export default function ResultCanvas() {
           </button>
           <button onClick={handleSendToVideo} className="action-pill">
             ▶ Animate
+          </button>
+          <button onClick={handleSendToUpscale} className="action-pill">
+            ✦ Upscale
           </button>
         </div>
       </div>

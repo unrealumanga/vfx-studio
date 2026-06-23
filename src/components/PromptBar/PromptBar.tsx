@@ -15,19 +15,19 @@ const TEXT_STYLE = [
   'tracking-normal',
   'whitespace-pre-wrap',
   'break-words',
-  'word-break',
 ].join(' ');
 
 export default function PromptBar({ onGenerate }: PromptBarProps) {
   const { prompt, setPrompt, isGenerating, error, setError, buildRequest } = useSessionStore();
   const searchPrompts = usePromptStore(s => s.search);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isExpanding, setIsExpanding] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const [ghostText, setGhostText] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  // Debounced search
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (prompt.length > 5) {
@@ -35,6 +35,7 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
         if (results.length > 0) {
           setSuggestions(results);
           setSelectedIdx(0);
+          setShowDropdown(true);
           const match = results.find(r => r.toLowerCase().startsWith(prompt.toLowerCase()));
           if (match) {
             setGhostText(match.slice(prompt.length));
@@ -43,17 +44,37 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           }
         } else {
           setSuggestions([]);
+          setShowDropdown(false);
           setGhostText('');
         }
       } else {
         setSuggestions([]);
+        setShowDropdown(false);
         setGhostText('');
       }
     };
-    
+
     const timer = setTimeout(fetchSuggestions, 300);
     return () => clearTimeout(timer);
   }, [prompt, searchPrompts]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const acceptSuggestion = (text: string) => {
+    setPrompt(text);
+    setSuggestions([]);
+    setShowDropdown(false);
+    setGhostText('');
+    textareaRef.current?.focus();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -69,6 +90,7 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
         setPrompt(newPrompt);
         setGhostText('');
         setSuggestions([]);
+        setShowDropdown(false);
         requestAnimationFrame(() => {
           if (textareaRef.current) {
             textareaRef.current.selectionStart = newPrompt.length;
@@ -77,10 +99,7 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           }
         });
       } else if (suggestions.length > 0 && selectedIdx >= 0) {
-        const newPrompt = suggestions[selectedIdx];
-        setPrompt(newPrompt);
-        setSuggestions([]);
-        setGhostText('');
+        acceptSuggestion(suggestions[selectedIdx]);
       }
       return;
     }
@@ -98,11 +117,15 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
         setSelectedIdx(i => (i > 0 ? i - 1 : i));
       }
     }
+
+    if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
-    setSuggestions([]);
+    setShowDropdown(false);
     onGenerate();
   };
 
@@ -117,9 +140,7 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
       const req = buildRequest();
       const result = await adapter.generate(req, apiKey);
       const refined = result.metadata?.refinedPrompt as string;
-      if (refined) {
-        setPrompt(refined);
-      }
+      if (refined) setPrompt(refined);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -128,8 +149,8 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
   };
 
   return (
-    <div className="relative">
-      <div 
+    <div ref={containerRef} className="relative z-30">
+      <div
         className={`relative flex items-end gap-2 glass-panel rounded-lg p-3 transition-all duration-300 ${
           isGenerating ? 'glow-pulse-active scale-[1.005]' : ''
         }`}
@@ -138,9 +159,10 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           {ghostText && (
             <div
               aria-hidden="true"
-              className={`absolute inset-0 px-0 py-0 pointer-events-none select-none text-transparent z-20 overflow-hidden ${TEXT_STYLE}`}
+              className={`absolute inset-0 px-0 py-0 pointer-events-none select-none z-20 overflow-hidden ${TEXT_STYLE}`}
+              style={{ color: 'transparent' }}
             >
-              <span className="text-transparent">{prompt}</span>
+              <span style={{ color: 'transparent' }}>{prompt}</span>
               <span className="text-studio-muted/35">{ghostText}</span>
             </div>
           )}
@@ -150,9 +172,7 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
             value={prompt}
             onChange={(e) => {
               setPrompt(e.target.value);
-              if (!e.target.value || !ghostText.startsWith('')) {
-                setGhostText('');
-              }
+              if (!e.target.value) setGhostText('');
             }}
             onKeyDown={handleKeyDown}
             placeholder=""
@@ -161,12 +181,12 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           />
 
           {!prompt && (
-            <span className="absolute top-0 left-0 pointer-events-none text-studio-muted/40 font-mono text-sm term-blink select-none">
+            <span className="absolute top-0 left-0 pointer-events-none text-studio-muted/50 font-mono text-sm term-cursor select-none">
               Describe what you want to create
             </span>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleExpandPrompt}
@@ -179,28 +199,33 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           <button
             onClick={handleGenerate}
             disabled={!prompt.trim() || isGenerating}
-            className="interactive-btn bg-studio-accent hover:bg-studio-accent-dim disabled:opacity-40 disabled:cursor-not-allowed text-white font-display font-medium px-5 py-2 rounded-full text-sm transition-all"
+            className="interactive-btn bg-studio-accent hover:bg-studio-accent-dim disabled:opacity-40 disabled:cursor-not-allowed text-black font-display font-medium px-5 py-2 rounded-full text-sm transition-all"
           >
             {isGenerating ? 'Generating...' : 'Generate'}
           </button>
         </div>
       </div>
-      
-      {suggestions.length > 0 && (
+
+      {showDropdown && suggestions.length > 0 && (
         <div className="absolute top-full left-0 w-full mt-2 glass-panel rounded-lg shadow-xl z-50 overflow-hidden text-sm font-mono border border-studio-border/50">
           <div className="p-2 text-[10px] text-studio-muted uppercase tracking-wider border-b border-studio-border/30 bg-black/20 flex justify-between">
-            <span>✨ Aesthetic Autocomplete</span>
+            <span>// AUTOCOMPLETE</span>
             <span>[Tab] to accept</span>
           </div>
           <div className="max-h-60 overflow-y-auto">
             {suggestions.map((sug, i) => (
-              <div 
+              <div
                 key={i}
-                className={`p-3 cursor-pointer border-b border-studio-border/10 last:border-0 ${i === selectedIdx ? 'bg-studio-accent/20 text-white' : 'text-studio-text/80 hover:bg-white/5'}`}
-                onClick={() => {
-                  setPrompt(sug);
-                  setSuggestions([]);
+                className={`p-3 cursor-pointer border-b border-studio-border/10 last:border-0 transition-colors ${
+                  i === selectedIdx
+                    ? 'bg-studio-accent/20 text-studio-text'
+                    : 'text-studio-muted hover:bg-white/5 hover:text-studio-text'
+                }`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  acceptSuggestion(sug);
                 }}
+                onMouseEnter={() => setSelectedIdx(i)}
               >
                 {sug}
               </div>

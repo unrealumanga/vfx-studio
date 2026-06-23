@@ -1,22 +1,35 @@
 @import "tailwindcss";
 
+/* ── Awwwards-Compliant Theme Palette ───────────────────────── */
+:root {
+  --bg-dark: #050505;
+  --bg-card: #0f0f0f;
+  --text-main: #e0e0e0;
+  --text-dim: #888888;
+  --accent-cyan: #00f3ff;
+  --accent-magenta: #ff003c;
+  --accent-yellow: #fcee0a;
+  --border-color: #1a1a1a;
+}
+
 @theme {
-  --color-studio-bg: #050508;
-  --color-studio-surface: rgba(17, 17, 24, 0.65);
-  --color-studio-border: rgba(255, 255, 255, 0.08);
-  --color-studio-accent: #88ce02;          /* GSAP signature green */
-  --color-studio-accent-dim: #5c9901;
-  --color-studio-purple: #8a3ffc;          /* GSAP purple */
-  --color-studio-cyan: #00b4d8;            /* GSAP cyan */
-  --color-studio-gold: #f5c842;
-  --color-studio-text: #e8e8f0;
-  --color-studio-muted: #8b8b9a;
+  --color-studio-bg: #050505;
+  --color-studio-surface: rgba(15, 15, 15, 0.7);
+  --color-studio-border: rgba(255, 255, 255, 0.06);
+  --color-studio-accent: #00f3ff;
+  --color-studio-accent-dim: #00c4cc;
+  --color-studio-purple: #8a3ffc;
+  --color-studio-cyan: #00f3ff;
+  --color-studio-gold: #fcee0a;
+  --color-studio-magenta: #ff003c;
+  --color-studio-text: #e0e0e0;
+  --color-studio-muted: #888888;
   --color-studio-danger: #ff4d6d;
   --color-studio-success: #4dffb4;
 
   --font-display: "Space Grotesk", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-body: "Space Mono", monospace;
+  --font-mono: "Space Mono", monospace;
 
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-shimmer: shimmer 1.5s infinite;
@@ -45,6 +58,7 @@
   }
 }
 
+/* ── Base ─────────────────────────────────────────────────────── */
 html {
   font-family: var(--font-body);
   background: var(--color-studio-bg);
@@ -58,63 +72,31 @@ body {
   background: transparent;
 }
 
-/* Custom cursor only for mouse/pointer devices */
-@media (pointer: fine) {
-  * {
-    cursor: none !important;
-  }
-  .cursor-dot {
-    width: 7px;
-    height: 7px;
-    background-color: var(--color-studio-accent);
-    border-radius: 50%;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9999;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-    will-change: transform;
-    box-shadow: 0 0 6px var(--color-studio-accent);
-  }
+* { cursor: auto !important; }
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Background Tech Grid ─────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-image:
+    linear-gradient(var(--color-studio-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-studio-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* Hide cursor elements on touchscreen devices */
-@media (pointer: coarse) {
-  .cursor-dot {
-    display: none !important;
-  }
-  * {
-    cursor: auto !important;
-  }
-}
-
-/* Hide scrollbars but keep functionality */
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* 🎨 Static Tech Grid Backdrops (Zero GPU redraw cost) */
 .ambient-container {
   position: fixed;
   inset: 0;
   z-index: -10;
-  background: #050508;
-  pointer-events: none;
-}
-
-.ambient-grid {
-  position: fixed;
-  inset: 0;
-  z-index: -9;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
+  background: #050505;
   pointer-events: none;
 }
 
@@ -124,32 +106,28 @@ body {
   right: -10%;
   width: 40vw;
   height: 40vw;
-  background: radial-gradient(
-    circle at center,
-    rgba(136, 206, 2, 0.06) 0%,
-    transparent 65%
-  );
+  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.05) 0%, transparent 65%);
   pointer-events: none;
   z-index: -8;
 }
 
-/* 🧪 Glassmorphic Panels */
+/* ── Glassmorphic Panels ──────────────────────────────────────── */
 .glass-panel {
-  background: rgba(17, 17, 24, 0.65);
+  background: rgba(15, 15, 15, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-studio-border);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel:hover {
-  border-color: rgba(136, 206, 2, 0.3);
-  box-shadow: 0 12px 40px 0 rgba(136, 206, 2, 0.12);
-  background: rgba(22, 22, 33, 0.75);
+  border-color: rgba(0, 243, 255, 0.25);
+  box-shadow: 0 12px 40px rgba(0, 243, 255, 0.08);
+  background: rgba(20, 20, 20, 0.8);
 }
 
-/* 🕹️ Cyberpunk Interactive Gills */
+/* ── Interactive Button ───────────────────────────────────────── */
 .interactive-btn {
   position: relative;
   overflow: hidden;
@@ -160,27 +138,22 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.15), transparent);
   transform: translateX(-100%);
   transition: transform 0.6s ease;
 }
 
-.interactive-btn:hover::after {
-  transform: translateX(100%);
-}
+.interactive-btn:hover::after { transform: translateX(100%); }
+.interactive-btn:active { transform: scale(0.95); }
 
-.interactive-btn:active {
-  transform: scale(0.95);
-}
-
-/* ⚡ Glowing Prompt Bar */
+/* ── Glowing Prompt Bar ──────────────────────────────────────── */
 .glow-pulse-active {
-  box-shadow: 0 0 30px rgba(136, 206, 2, 0.4), 
-              inset 0 0 20px rgba(136, 206, 2, 0.25);
+  box-shadow: 0 0 30px rgba(0, 243, 255, 0.3),
+              inset 0 0 20px rgba(0, 243, 255, 0.15);
   border-color: var(--color-studio-accent);
 }
 
-/* 🖥️ Canvas Scan HUD */
+/* ── Canvas Scan HUD ─────────────────────────────────────────── */
 .hud-scanline {
   position: absolute;
   left: 0;
@@ -192,79 +165,163 @@ body {
   pointer-events: none;
 }
 
-/* ⬇️ Action pills — ResultCanvas hover overlay */
+/* ── Action pills ────────────────────────────────────────────── */
 .action-pill {
   padding: 0.375rem 0.875rem;
   border-radius: 9999px;
   font-size: 0.7rem;
   font-family: var(--font-mono);
   color: white;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: all 0.15s ease;
   cursor: pointer;
   white-space: nowrap;
 }
+
 .action-pill:hover {
-  background: rgba(136, 206, 2, 0.2);
-  border-color: rgba(136, 206, 2, 0.5);
-  color: #88ce02;
+  background: rgba(0, 243, 255, 0.15);
+  border-color: rgba(0, 243, 255, 0.4);
+  color: #00f3ff;
 }
 
-/* ⏱️ Terminal blinking cursor */
-.term-blink::after {
-  content: '_';
-  color: var(--color-studio-accent);
-  animation: blink 1s step-end infinite;
-  margin-left: 1px;
-}
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
-
-/* 💻 RGB Glitch typography */
+/* ── Glitch Typography ────────────────────────────────────────── */
 .glitch-text {
   position: relative;
   display: inline-block;
 }
-.glitch-text::before,
-.glitch-text::after {
+
+.glitch-text::before, .glitch-text::after {
   content: attr(data-text);
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
   opacity: 0.85;
 }
+
 .glitch-text::before {
-  color: #00f3ff;
+  color: var(--accent-cyan);
   z-index: -1;
-  transform: translate(-1px, 0);
+  transform: translate(-2px, 0);
 }
+
 .glitch-text::after {
-  color: #ff003c;
+  color: var(--accent-magenta);
   z-index: -2;
-  transform: translate(1px, 0);
+  transform: translate(2px, 0);
 }
+
 .glitch-container:hover .glitch-text::before {
-  animation: glitch-anim-1 0.4s infinite linear alternate-reverse;
+  animation: glitch-anim-1 0.5s infinite linear alternate-reverse;
 }
+
 .glitch-container:hover .glitch-text::after {
-  animation: glitch-anim-2 0.4s infinite linear alternate-reverse;
+  animation: glitch-anim-2 0.5s infinite linear alternate-reverse;
 }
+
 @keyframes glitch-anim-1 {
-  0%   { clip-path: inset(20% 0 60% 0); transform: translate(-3px, -1px); }
-  25%  { clip-path: inset(80% 0 5%  0); transform: translate(3px,   1px); }
-  50%  { clip-path: inset(40% 0 40% 0); transform: translate(-1px,  0);   }
-  75%  { clip-path: inset(10% 0 80% 0); transform: translate(2px,  -1px); }
-  100% { clip-path: inset(60% 0 20% 0); transform: translate(-3px,  1px); }
+  0%   { clip-path: inset(20% 0 60% 0); transform: translate(-4px, -2px); }
+  20%  { clip-path: inset(80% 0 5%  0); transform: translate(4px,   2px); }
+  40%  { clip-path: inset(40% 0 40% 0); transform: translate(-2px,    0); }
+  60%  { clip-path: inset(10% 0 80% 0); transform: translate(2px,  -2px); }
+  80%  { clip-path: inset(60% 0 20% 0); transform: translate(-4px,  2px); }
+  100% { clip-path: inset(30% 0 50% 0); transform: translate(4px,    0); }
 }
+
 @keyframes glitch-anim-2 {
-  0%   { clip-path: inset(70% 0 10% 0); transform: translate(3px,  1px);  }
-  25%  { clip-path: inset(20% 0 60% 0); transform: translate(-3px, -1px); }
-  50%  { clip-path: inset(40% 0 40% 0); transform: translate(1px,  0);    }
-  75%  { clip-path: inset(80% 0 5%  0); transform: translate(-2px, 1px);  }
-  100% { clip-path: inset(50% 0 30% 0); transform: translate(-3px, 0);    }
+  0%   { clip-path: inset(70% 0 10% 0); transform: translate(4px,   2px); }
+  20%  { clip-path: inset(20% 0 60% 0); transform: translate(-4px, -2px); }
+  40%  { clip-path: inset(40% 0 40% 0); transform: translate(2px,    0); }
+  60%  { clip-path: inset(80% 0 5%  0); transform: translate(-2px,  2px); }
+  80%  { clip-path: inset(10% 0 80% 0); transform: translate(4px,  -2px); }
+  100% { clip-path: inset(50% 0 30% 0); transform: translate(-4px,   0); }
+}
+
+/* ── Terminal Blinking Cursor ─────────────────────────────────── */
+.term-cursor::after {
+  content: '_';
+  color: var(--accent-cyan);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* ── Text Scramble Link ────────────────────────────────────────── */
+.scramble-link {
+  position: relative;
+  transition: color 0.2s;
+}
+.scramble-link:hover { color: var(--accent-cyan); }
+
+/* ── Glitch Image Cards ────────────────────────────────────────── */
+.site-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-studio-border);
+  background: var(--bg-card);
+}
+
+.site-card img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  filter: grayscale(100%) contrast(1.2);
+  transition: filter 0.4s ease, transform 0.4s ease;
+}
+
+.site-card:hover img {
+  filter: grayscale(0%) contrast(1.1);
+  transform: scale(1.03);
+}
+
+.card-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.1), rgba(255, 0, 60, 0.1));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.site-card:hover .card-overlay { opacity: 1; }
+
+/* ── Marquee ───────────────────────────────────────────────────── */
+.marquee-container {
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--color-studio-border);
+  border-bottom: 1px solid var(--color-studio-border);
+  background: #000;
+}
+
+.marquee-track {
+  display: flex;
+  animation: marquee 30s linear infinite;
+}
+
+.marquee-track h2 {
+  font-size: 4rem;
+  margin-right: 3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  color: var(--text-dim);
+}
+
+.marquee-track h2 span {
+  color: var(--accent-yellow);
+  font-size: 1.5rem;
+  margin: 0 1.5rem;
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }

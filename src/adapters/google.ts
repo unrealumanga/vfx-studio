@@ -26,7 +26,7 @@ function pickImageModel(req: GenerationRequest): string {
 
 export const googleAdapter: BaseAdapter = {
   provider: 'google',
-  displayName: 'Google AI (Nano Banana)',
+  displayName: 'Google AI',
 
   capabilities: {
     tasks: ['image-gen', 'image-edit', 'video-gen', 'archviz',
@@ -257,22 +257,28 @@ async function generateVideo(
           op?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
           ?? op?.response?.videos?.[0]?.uri;
         if (!videoUri) throw new Error('Veo: no video URI in response');
-        
-        // Fetch the video as a blob immediately while apiKey is in scope
-        const videoRes = await fetch(`${videoUri}?key=${apiKey}&alt=media`);
+
+        const downloadUrl = new URL(videoUri);
+        downloadUrl.searchParams.set('key', apiKey);
+        downloadUrl.searchParams.set('alt', 'media');
+
+        const videoRes = await fetch(downloadUrl.toString());
         if (!videoRes.ok) {
           console.warn('Veo: could not fetch video blob, returning URI fallback');
           return {
             type: 'video',
-            url: `${videoUri}?key=${apiKey}&alt=media`,
+            url: downloadUrl.toString(),
             model: VEO_MODEL,
             provider: 'google',
             durationMs: Date.now() - start,
           };
         }
-        
+
         const videoBlob = await videoRes.blob();
-        const mimeType = videoRes.headers.get('content-type') ?? 'video/mp4';
+        const contentType = videoRes.headers.get('content-type');
+        const mimeType = contentType && contentType.includes('video')
+          ? contentType
+          : 'video/mp4';
         const typedBlob = new Blob([videoBlob], { type: mimeType });
 
         return {

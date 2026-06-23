@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useKeysStore, type ProviderKey } from '../../store/keys.store';
 
 const PROVIDER_LABELS: Record<ProviderKey, string> = {
-  google: 'Google AI Studio (Imagen 3, Veo 2)',
+  google: 'Google AI Studio (Gemini, Veo 2)',
   openai: 'OpenAI (DALL·E 3, GPT-4o)',
   anthropic: 'Anthropic (Claude)',
   replicate: 'Replicate (Flux, ESRGAN)',
@@ -62,10 +62,10 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="glass-panel rounded-lg w-full max-w-lg p-6 animate-slide-up shadow-[0_0_50px_rgba(124,109,255,0.15)]">
+      <div className="glass-panel rounded-lg w-full max-w-lg p-6 animate-slide-up shadow-[0_0_50px_rgba(0,243,255,0.15)]">
         <div className="flex items-center justify-between mb-4 border-b border-studio-border pb-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-studio-accent animate-pulse shadow-[0_0_8px_#7c6dff]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-studio-accent animate-pulse shadow-[0_0_8px_#00f3ff]" />
             <h2 className="text-lg font-display font-bold text-studio-text tracking-wide">
               {phase === 'unlock' ? 'Unlock Key Vault' : 'API Key Management'}
             </h2>
@@ -85,13 +85,13 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
               onChange={(e) => setLocalPassphrase(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
               placeholder="Enter passphrase..."
-              className="w-full bg-black/40 border border-studio-border rounded px-3 py-2 text-studio-text font-mono text-sm outline-none focus:border-studio-accent focus:shadow-[0_0_15px_rgba(124,109,255,0.25)] transition-all mb-1"
+              className="w-full bg-black/40 border border-studio-border rounded px-3 py-2 text-studio-text font-mono text-sm outline-none focus:border-studio-accent focus:shadow-[0_0_15px_rgba(0,243,255,0.25)] transition-all mb-1"
               autoFocus
             />
             {error && <p className="text-studio-danger text-xs font-mono">{error}</p>}
             <button
               onClick={handleUnlock}
-              className="interactive-btn w-full bg-studio-accent hover:bg-studio-accent-dim text-white rounded-full py-2 font-display font-bold text-sm tracking-wide transition-all shadow-[0_4px_15px_rgba(124,109,255,0.3)]"
+              className="interactive-btn w-full bg-studio-accent hover:bg-studio-accent-dim text-white rounded-full py-2 font-display font-bold text-sm tracking-wide transition-all shadow-[0_4px_15px_rgba(0,243,255,0.3)]"
             >
               Unlock Vault
             </button>
@@ -128,7 +128,7 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
                     />
                     <button
                       onClick={() => handleSaveKey(provider)}
-                      className="bg-studio-accent hover:bg-studio-accent-dim text-white px-3 rounded text-xs font-medium transition-colors"
+                      className="bg-studio-accent hover:bg-studio-accent-dim text-black px-3 rounded text-xs font-medium transition-colors"
                     >
                       Save
                     </button>
