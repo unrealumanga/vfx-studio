@@ -63,55 +63,6 @@ export default function ImageGen() {
           </select>
         </div>
       )}
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => {
-            const session = useSessionStore.getState();
-            const result = session.currentResult;
-            if (result) {
-              session.setReferenceImage(result.blob ?? null);
-              session.setActiveTask('image-edit');
-            }
-          }}
-          className="flex-1 text-xs text-studio-muted hover:text-studio-text bg-studio-bg border border-studio-border rounded py-1.5 font-mono transition-colors"
-        >
-          ✂ Edit
-        </button>
-        <button
-          onClick={async () => {
-            const result = useSessionStore.getState().currentResult;
-            if (result) {
-              if (result.blob) {
-                const url = URL.createObjectURL(result.blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `vfx-studio-${Date.now()}.png`;
-                a.click();
-                URL.revokeObjectURL(url);
-              } else if (result.url) {
-                try {
-                  // Fetch the remote URL as a blob and download it to bypass default navigation blocks
-                  const res = await fetch(result.url);
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `vfx-studio-${Date.now()}.png`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                } catch (e) {
-                  console.error("Direct download failed, falling back to open in tab:", e);
-                  window.open(result.url, '_blank');
-                }
-              }
-            }
-          }}
-          className="flex-1 text-xs text-studio-muted hover:text-studio-accent bg-studio-bg border border-studio-border rounded py-1.5 font-mono transition-colors interactive-btn"
-        >
-          ⬇ Download
-        </button>
-      </div>
     </div>
   );
 }

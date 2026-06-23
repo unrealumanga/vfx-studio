@@ -28,35 +28,35 @@ function App() {
   const initPromptStore = usePromptStore(s => s.init);
 
   const dotRef = useRef<HTMLDivElement>(null);
-  const outlineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const hasKeys = availableProviders().length > 0;
     if (!hasKeys) {
       setKeyVaultOpen(true);
     }
-    // Initialize embedding worker for prompt autocomplete
     initPromptStore();
 
-    // GSAP Custom Cursor Trailing Effect
+    // GSAP Custom Cursor Dot follow with scale-ups
     const cursorDot = dotRef.current;
-    const cursorOutline = outlineRef.current;
-
-    if (cursorDot && cursorOutline && window.matchMedia('(pointer: fine)').matches) {
-      const xToDot = gsap.quickTo(cursorDot, "x", { duration: 0.08, ease: "power3" });
-      const yToDot = gsap.quickTo(cursorDot, "y", { duration: 0.08, ease: "power3" });
-      const xToOutline = gsap.quickTo(cursorOutline, "x", { duration: 0.25, ease: "power3" });
-      const yToOutline = gsap.quickTo(cursorOutline, "y", { duration: 0.25, ease: "power3" });
-
-      const onMouseMove = (e: MouseEvent) => {
-        xToDot(e.clientX);
-        yToDot(e.clientY);
-        xToOutline(e.clientX);
-        yToOutline(e.clientY);
+    if (cursorDot && window.matchMedia('(pointer: fine)').matches) {
+      const moveDot = (e: MouseEvent) => {
+        gsap.set(cursorDot, { x: e.clientX, y: e.clientY });
       };
 
-      window.addEventListener('mousemove', onMouseMove);
-      return () => window.removeEventListener('mousemove', onMouseMove);
+      window.addEventListener('mousemove', moveDot, { passive: true });
+
+      const scaleUp = () => gsap.to(cursorDot, { scale: 2.5, duration: 0.15 });
+      const scaleDown = () => gsap.to(cursorDot, { scale: 1, duration: 0.15 });
+
+      document.querySelectorAll('button, a, [role="button"], select, input, textarea')
+        .forEach((el) => {
+          el.addEventListener('mouseenter', scaleUp);
+          el.addEventListener('mouseleave', scaleDown);
+        });
+
+      return () => {
+        window.removeEventListener('mousemove', moveDot);
+      };
     }
   }, []);
 
@@ -80,6 +80,8 @@ function App() {
         break;
       case 'prompt-assist':
         break;
+      case 'model-tournament':
+        break;
     }
   };
 
@@ -99,17 +101,13 @@ function App() {
 
   return (
     <div className="md:h-screen flex flex-col relative md:overflow-hidden text-studio-text select-none min-h-screen">
-      {/* GSAP Cursor Primitives */}
+      {/* GSAP Cursor Dot Primitives */}
       <div ref={dotRef} className="cursor-dot hidden md:block" />
-      <div ref={outlineRef} className="cursor-outline hidden md:block" />
 
-      {/* 🎭 Ambient Living backdrops */}
-      <div className="ambient-container">
-        <div className="ambient-orb-1" />
-        <div className="ambient-orb-2" />
-        <div className="ambient-orb-3" />
-      </div>
+      {/* 🎭 Minimal Ambient Background Layers */}
+      <div className="ambient-container" />
       <div className="ambient-grid" />
+      <div className="ambient-accent" />
 
       <div className="relative z-10 flex flex-col h-full">
         <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />

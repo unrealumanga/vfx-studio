@@ -8,6 +8,16 @@ interface PromptBarProps {
   onGenerate: () => void;
 }
 
+const TEXT_STYLE = [
+  'font-mono',
+  'text-sm',
+  'leading-relaxed',
+  'tracking-normal',
+  'whitespace-pre-wrap',
+  'break-words',
+  'word-break',
+].join(' ');
+
 export default function PromptBar({ onGenerate }: PromptBarProps) {
   const { prompt, setPrompt, isGenerating, error, setError, buildRequest } = useSessionStore();
   const searchPrompts = usePromptStore(s => s.search);
@@ -25,7 +35,6 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
         if (results.length > 0) {
           setSuggestions(results);
           setSelectedIdx(0);
-          // Auto-ghost text if the prompt matches the beginning of a suggestion
           const match = results.find(r => r.toLowerCase().startsWith(prompt.toLowerCase()));
           if (match) {
             setGhostText(match.slice(prompt.length));
@@ -56,12 +65,22 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
     if (e.key === 'Tab') {
       e.preventDefault();
       if (ghostText) {
-        setPrompt(prompt + ghostText);
+        const newPrompt = prompt + ghostText;
+        setPrompt(newPrompt);
         setGhostText('');
         setSuggestions([]);
+        requestAnimationFrame(() => {
+          if (textareaRef.current) {
+            textareaRef.current.selectionStart = newPrompt.length;
+            textareaRef.current.selectionEnd = newPrompt.length;
+            textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+          }
+        });
       } else if (suggestions.length > 0 && selectedIdx >= 0) {
-        setPrompt(suggestions[selectedIdx]);
+        const newPrompt = suggestions[selectedIdx];
+        setPrompt(newPrompt);
         setSuggestions([]);
+        setGhostText('');
       }
       return;
     }
@@ -115,20 +134,36 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
           isGenerating ? 'glow-pulse-active scale-[1.005]' : ''
         }`}
       >
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
+          {ghostText && (
+            <div
+              aria-hidden="true"
+              className={`absolute inset-0 px-0 py-0 pointer-events-none select-none text-transparent z-20 overflow-hidden ${TEXT_STYLE}`}
+            >
+              <span className="text-transparent">{prompt}</span>
+              <span className="text-studio-muted/35">{ghostText}</span>
+            </div>
+          )}
+
           <textarea
             ref={textareaRef}
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => {
+              setPrompt(e.target.value);
+              if (!e.target.value || !ghostText.startsWith('')) {
+                setGhostText('');
+              }
+            }}
             onKeyDown={handleKeyDown}
-            placeholder="✦ Describe what you want to create..."
+            placeholder=""
             rows={2}
-            className="w-full bg-transparent text-studio-text placeholder-studio-muted font-mono text-sm resize-none outline-none leading-relaxed relative z-10"
+            className={`w-full bg-transparent text-studio-text placeholder-studio-muted/40 resize-none outline-none leading-relaxed relative z-10 ${TEXT_STYLE}`}
           />
-          {ghostText && (
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none font-mono text-sm leading-relaxed overflow-hidden text-transparent whitespace-pre-wrap word-break">
-              <span>{prompt}</span><span className="text-studio-muted/40">{ghostText}</span>
-            </div>
+
+          {!prompt && (
+            <span className="absolute top-0 left-0 pointer-events-none text-studio-muted/40 font-mono text-sm term-blink select-none">
+              Describe what you want to create
+            </span>
           )}
         </div>
         
@@ -151,7 +186,6 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
         </div>
       </div>
       
-      {/* Suggestions Dropdown */}
       {suggestions.length > 0 && (
         <div className="absolute top-full left-0 w-full mt-2 glass-panel rounded-lg shadow-xl z-50 overflow-hidden text-sm font-mono border border-studio-border/50">
           <div className="p-2 text-[10px] text-studio-muted uppercase tracking-wider border-b border-studio-border/30 bg-black/20 flex justify-between">

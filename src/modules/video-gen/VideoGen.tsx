@@ -12,11 +12,14 @@ export default function VideoGen() {
     overrideProvider, setReferenceImage, setStyleImage,
     referenceImage, styleImage,
     _videoDuration, setVideoDuration,
+    currentResult,
   } = useSessionStore();
   const keys = useKeysStore((s) => s.keys);
   const [mode, setMode] = useState<VideoMode>('text');
   const startRef = useRef<HTMLInputElement>(null);
   const endRef   = useRef<HTMLInputElement>(null);
+
+  const hasImageResult = currentResult?.type === 'image' && (currentResult.blob || currentResult.url);
 
   useEffect(() => {
     setReferenceImage(null);
@@ -42,6 +45,29 @@ export default function VideoGen() {
   return (
     <div className="space-y-3">
       <ModelBadge currentProvider={resolved} />
+
+      {hasImageResult && (
+        <button
+          onClick={async () => {
+            if (currentResult!.blob) {
+              setReferenceImage(currentResult!.blob);
+              setMode('image');
+            } else if (currentResult!.url) {
+              try {
+                const res = await fetch(currentResult!.url);
+                const blob = await res.blob();
+                setReferenceImage(blob);
+                setMode('image');
+              } catch {
+                console.error('Could not load result as video start frame');
+              }
+            }
+          }}
+          className="w-full text-[10px] font-mono py-2 rounded border border-studio-accent/40 text-studio-accent hover:bg-studio-accent/10 transition-colors flex items-center justify-center gap-1.5 interactive-btn"
+        >
+          ▶ Animate current image
+        </button>
+      )}
 
       <div>
         <label className="text-studio-muted text-xs font-mono block mb-1">Mode</label>

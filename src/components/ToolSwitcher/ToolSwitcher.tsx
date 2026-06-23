@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Task } from '../../adapters/_base';
 import { useSessionStore } from '../../store/session.store';
 
@@ -16,32 +17,65 @@ interface ToolSwitcherProps {
   onOpenKeys: () => void;
 }
 
+// Free hover text scramble micro-interaction for Awwwards style
+function scrambleText(targetText: string, onUpdate: (val: string) => void) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+{}|:"<>?';
+  let iterations = 0;
+  const interval = setInterval(() => {
+    onUpdate(
+      targetText
+        .split('')
+        .map((char, index) => {
+          if (index < iterations) return targetText[index];
+          if (char === ' ') return ' ';
+          return chars[Math.floor(Math.random() * chars.length)];
+        })
+        .join('')
+    );
+    if (iterations >= targetText.length) clearInterval(interval);
+    iterations += 1 / 3;
+  }, 30);
+}
+
 export default function ToolSwitcher({ onOpenKeys }: ToolSwitcherProps) {
   const { activeTask, setActiveTask } = useSessionStore();
 
   return (
     <div className="flex items-center justify-between px-4 py-2 glass-panel border-b border-studio-border/30 shrink-0 w-full overflow-hidden select-none">
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-none whitespace-nowrap flex-1 mr-4 py-0.5">
-        <span className="text-studio-accent font-display font-bold text-sm mr-4 shrink-0">◈ VFX Studio</span>
+        {/* RGB Glitch Split Logo */}
+        <div className="glitch-container mr-4 shrink-0">
+          <span
+            className="glitch-text text-studio-accent font-display font-bold text-sm tracking-wider cursor-pointer"
+            data-text="VFX.STUDIO"
+          >
+            VFX.STUDIO
+          </span>
+        </div>
+        
         <div className="flex gap-1">
-          {TOOLS.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={() => setActiveTask(tool.id)}
-              className={`px-3 py-1.5 rounded text-xs font-medium font-display transition-all duration-200 shrink-0 interactive-btn ${
-                activeTask === tool.id
-                  ? 'bg-studio-accent text-white shadow-[0_2px_10px_rgba(136,206,2,0.3)]'
-                  : 'text-studio-muted hover:text-studio-text hover:bg-studio-border'
-              }`}
-            >
-              {tool.label}
-            </button>
-          ))}
+          {TOOLS.map((tool) => {
+            const [label, setLabel] = useState(tool.label);
+            return (
+              <button
+                key={tool.id}
+                onMouseEnter={() => scrambleText(tool.label, setLabel)}
+                onClick={() => setActiveTask(tool.id)}
+                className={`px-3 py-1.5 rounded text-xs font-mono transition-all duration-200 shrink-0 interactive-btn ${
+                  activeTask === tool.id
+                    ? 'bg-studio-accent text-white shadow-[0_2px_10px_rgba(136,206,2,0.3)]'
+                    : 'text-studio-muted hover:text-studio-text hover:bg-studio-border'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
       <button
         onClick={onOpenKeys}
-        className="text-studio-muted hover:text-studio-text text-xs font-medium px-3 py-1.5 rounded hover:bg-studio-border transition-all duration-200 shrink-0 interactive-btn glass-panel border border-studio-border/30"
+        className="text-studio-muted hover:text-studio-text text-xs font-mono px-2 py-1 rounded hover:bg-studio-border transition-colors shrink-0"
         title="API Key Settings"
       >
         ⚙ Keys

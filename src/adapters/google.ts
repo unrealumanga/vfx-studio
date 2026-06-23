@@ -1,8 +1,7 @@
-// src/adapters/google.ts — Full replacement
+// src/adapters/google.ts — Full V3 replacement
 
 import type { BaseAdapter, GenerationRequest, GenerationResult } from './_base';
 
-// ── Model roster ──────────────────────────────────────────────
 export const GOOGLE_IMAGE_MODELS = {
   'nano-banana':     'gemini-2.5-flash-image',          // fast, economical
   'nano-banana-2':   'gemini-3.1-flash-image-preview',  // default, best balance
@@ -11,22 +10,15 @@ export const GOOGLE_IMAGE_MODELS = {
 
 export type GoogleImageModel = keyof typeof GOOGLE_IMAGE_MODELS;
 
-// Model used when quality is not overridden
 const DEFAULT_IMAGE_MODEL: GoogleImageModel = 'nano-banana-2';
-
-// Veo video model (current GA)
 const VEO_MODEL     = 'veo-2.0-generate-001';
-
 const GEMINI_BASE   = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-// ── Quality → model mapping ───────────────────────────────────
 function pickImageModel(req: GenerationRequest): string {
-  // Explicit override via metadata (set by model picker UI)
   const override = req.metadata?.googleModel as GoogleImageModel | undefined;
   if (override && GOOGLE_IMAGE_MODELS[override]) {
     return GOOGLE_IMAGE_MODELS[override];
   }
-  // Quality mapping
   if (req.quality === 'ultra') return GOOGLE_IMAGE_MODELS['nano-banana-pro'];
   if (req.quality === 'draft') return GOOGLE_IMAGE_MODELS['nano-banana'];
   return GOOGLE_IMAGE_MODELS[DEFAULT_IMAGE_MODEL];
@@ -82,8 +74,6 @@ async function generateImage(
   req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
   const model = pickImageModel(req);
-
-  // Append aspect ratio description to prompt for reliable layout across all models
   let enhancedPrompt = req.prompt;
   if (req.aspectRatio) {
     enhancedPrompt += `. Aspect ratio: ${req.aspectRatio}.`;
@@ -160,7 +150,7 @@ async function editImage(
   return extractImageResult(await res.json(), model, start);
 }
 
-// ── Upscale (via Nano Banana img2img) ────────────────────────
+// ── Upscale ───────────────────────────────────────────────────
 async function upscaleWithGemini(
   req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
@@ -240,9 +230,7 @@ async function generateVideo(
       `${veoBase}/models/${VEO_MODEL}:predictLongRunning?key=${apiKey}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }
     );
@@ -255,28 +243,46 @@ async function generateVideo(
     const operation = await initRes.json();
     const operationName: string = operation.name;
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 80; i++) {
       await sleep(5000);
       const pollRes = await fetch(`${veoBase}/${operationName}?key=${apiKey}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       const op = await pollRes.json();
+      
+      if (op.error) throw new Error(`Veo generation failed: ${op.error.message}`);
+      
       if (op.done) {
         const videoUri =
           op?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
           ?? op?.response?.videos?.[0]?.uri;
         if (!videoUri) throw new Error('Veo: no video URI in response');
+        
+        // Fetch the video as a blob immediately while apiKey is in scope
+        const videoRes = await fetch(`${videoUri}?key=${apiKey}&alt=media`);
+        if (!videoRes.ok) {
+          console.warn('Veo: could not fetch video blob, returning URI fallback');
+          return {
+            type: 'video',
+            url: `${videoUri}?key=${apiKey}&alt=media`,
+            model: VEO_MODEL,
+            provider: 'google',
+            durationMs: Date.now() - start,
+          };
+        }
+        
+        const videoBlob = await videoRes.blob();
+        const mimeType = videoRes.headers.get('content-type') ?? 'video/mp4';
+        const typedBlob = new Blob([videoBlob], { type: mimeType });
+
         return {
           type: 'video',
-          url: videoUri,
+          blob: typedBlob,
           model: VEO_MODEL,
           provider: 'google',
           durationMs: Date.now() - start,
         };
       }
-      if (op.error) throw new Error(`Veo generation failed: ${op.error.message}`);
     }
 
     throw new Error('Veo: timed out after 5 minutes');

@@ -2,7 +2,7 @@
 
 @theme {
   --color-studio-bg: #050508;
-  --color-studio-surface: rgba(17, 17, 24, 0.7);
+  --color-studio-surface: rgba(17, 17, 24, 0.65);
   --color-studio-border: rgba(255, 255, 255, 0.08);
   --color-studio-accent: #88ce02;          /* GSAP signature green */
   --color-studio-accent-dim: #5c9901;
@@ -64,8 +64,8 @@ body {
     cursor: none !important;
   }
   .cursor-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     background-color: var(--color-studio-accent);
     border-radius: 50%;
     position: fixed;
@@ -74,25 +74,14 @@ body {
     z-index: 9999;
     pointer-events: none;
     transform: translate(-50%, -50%);
-  }
-  .cursor-outline {
-    width: 36px;
-    height: 36px;
-    border: 1.5px solid var(--color-studio-accent);
-    border-radius: 50%;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9998;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-    will-change: transform, top, left;
+    will-change: transform;
+    box-shadow: 0 0 6px var(--color-studio-accent);
   }
 }
 
 /* Hide cursor elements on touchscreen devices */
 @media (pointer: coarse) {
-  .cursor-dot, .cursor-outline {
+  .cursor-dot {
     display: none !important;
   }
   * {
@@ -109,46 +98,13 @@ body {
   scrollbar-width: none;
 }
 
-/* 🎨 Ambient Cinematic Backgrounds */
+/* 🎨 Static Tech Grid Backdrops (Zero GPU redraw cost) */
 .ambient-container {
   position: fixed;
   inset: 0;
   z-index: -10;
-  background: radial-gradient(circle at center, #111116 0%, #050508 100%);
-  overflow: hidden;
-}
-
-.ambient-orb-1 {
-  position: absolute;
-  top: -10%;
-  right: -5%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(136, 206, 2, 0.4) 0%, rgba(0,0,0,0) 70%);
-  filter: blur(50px);
-  animation: var(--animate-flow);
-}
-
-.ambient-orb-2 {
-  position: absolute;
-  bottom: -20%;
-  left: -10%;
-  width: 700px;
-  height: 700px;
-  background: radial-gradient(circle, rgba(138, 63, 252, 0.3) 0%, rgba(0,0,0,0) 70%);
-  filter: blur(60px);
-  animation: var(--animate-flow) 25s ease infinite reverse;
-}
-
-.ambient-orb-3 {
-  position: absolute;
-  top: 30%;
-  left: 20%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(0, 180, 216, 0.25) 0%, rgba(0,0,0,0) 70%);
-  filter: blur(50px);
-  animation: var(--animate-flow) 15s ease infinite;
+  background: #050508;
+  pointer-events: none;
 }
 
 .ambient-grid {
@@ -158,10 +114,23 @@ body {
   background-image: 
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
+  background-size: 48px 48px;
   pointer-events: none;
-  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+}
+
+.ambient-accent {
+  position: fixed;
+  top: -20%;
+  right: -10%;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(
+    circle at center,
+    rgba(136, 206, 2, 0.06) 0%,
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: -8;
 }
 
 /* 🧪 Glassmorphic Panels */
@@ -191,7 +160,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transform: translateX(-100%);
   transition: transform 0.6s ease;
 }
@@ -221,4 +190,81 @@ body {
   box-shadow: 0 0 15px var(--color-studio-accent);
   animation: var(--animate-scan);
   pointer-events: none;
+}
+
+/* ⬇️ Action pills — ResultCanvas hover overlay */
+.action-pill {
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: white;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.action-pill:hover {
+  background: rgba(136, 206, 2, 0.2);
+  border-color: rgba(136, 206, 2, 0.5);
+  color: #88ce02;
+}
+
+/* ⏱️ Terminal blinking cursor */
+.term-blink::after {
+  content: '_';
+  color: var(--color-studio-accent);
+  animation: blink 1s step-end infinite;
+  margin-left: 1px;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* 💻 RGB Glitch typography */
+.glitch-text {
+  position: relative;
+  display: inline-block;
+}
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0.85;
+}
+.glitch-text::before {
+  color: #00f3ff;
+  z-index: -1;
+  transform: translate(-1px, 0);
+}
+.glitch-text::after {
+  color: #ff003c;
+  z-index: -2;
+  transform: translate(1px, 0);
+}
+.glitch-container:hover .glitch-text::before {
+  animation: glitch-anim-1 0.4s infinite linear alternate-reverse;
+}
+.glitch-container:hover .glitch-text::after {
+  animation: glitch-anim-2 0.4s infinite linear alternate-reverse;
+}
+@keyframes glitch-anim-1 {
+  0%   { clip-path: inset(20% 0 60% 0); transform: translate(-3px, -1px); }
+  25%  { clip-path: inset(80% 0 5%  0); transform: translate(3px,   1px); }
+  50%  { clip-path: inset(40% 0 40% 0); transform: translate(-1px,  0);   }
+  75%  { clip-path: inset(10% 0 80% 0); transform: translate(2px,  -1px); }
+  100% { clip-path: inset(60% 0 20% 0); transform: translate(-3px,  1px); }
+}
+@keyframes glitch-anim-2 {
+  0%   { clip-path: inset(70% 0 10% 0); transform: translate(3px,  1px);  }
+  25%  { clip-path: inset(20% 0 60% 0); transform: translate(-3px, -1px); }
+  50%  { clip-path: inset(40% 0 40% 0); transform: translate(1px,  0);    }
+  75%  { clip-path: inset(80% 0 5%  0); transform: translate(-2px, 1px);  }
+  100% { clip-path: inset(50% 0 30% 0); transform: translate(-3px, 0);    }
 }

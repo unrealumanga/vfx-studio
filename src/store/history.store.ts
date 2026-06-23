@@ -52,17 +52,22 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     const { db } = get();
     if (!db) return;
 
+    // For video: don't persist the blob (too large). Store URL or placeholder.
+    const storableResult: GenerationResult = result.type === 'video'
+      ? { ...result, blob: undefined }   // strip blob for storage
+      : result;
+
     const entry: Omit<HistoryEntry, 'id'> = {
       prompt,
-      result,
+      result: storableResult,
       timestamp: Date.now(),
       task,
     };
 
     const id = await db.add(STORE_NAME, entry);
-    const newEntry: HistoryEntry = { ...entry, id: id as number };
-
-    set((s) => ({ entries: [newEntry, ...s.entries].slice(0, 50) }));
+    // For in-memory list, keep the original result with blob intact
+    const memoryEntry: HistoryEntry = { ...entry, id: id as number, result };
+    set((s) => ({ entries: [memoryEntry, ...s.entries].slice(0, 50) }));
   },
 
   loadEntries: async () => {
