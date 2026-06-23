@@ -61,20 +61,23 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-studio-surface border border-studio-border rounded-lg w-full max-w-lg p-6 animate-slide-up">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-display font-semibold text-studio-text">
-            {phase === 'unlock' ? 'Unlock Key Vault' : 'API Key Management'}
-          </h2>
-          <button onClick={onClose} className="text-studio-muted hover:text-studio-text text-xl leading-none">&times;</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+      <div className="glass-panel rounded-lg w-full max-w-lg p-6 animate-slide-up shadow-[0_0_50px_rgba(124,109,255,0.15)]">
+        <div className="flex items-center justify-between mb-4 border-b border-studio-border pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-studio-accent animate-pulse shadow-[0_0_8px_#7c6dff]" />
+            <h2 className="text-lg font-display font-bold text-studio-text tracking-wide">
+              {phase === 'unlock' ? 'Unlock Key Vault' : 'API Key Management'}
+            </h2>
+          </div>
+          <button onClick={onClose} className="text-studio-muted hover:text-studio-text text-xl leading-none transition-colors">&times;</button>
         </div>
 
         {phase === 'unlock' && (
-          <div>
-            <p className="text-studio-muted text-sm mb-3">
-              Enter your passphrase to decrypt stored API keys.
-              First time? Enter a new passphrase to get started.
+          <div className="space-y-4">
+            <p className="text-studio-muted text-xs font-mono leading-relaxed">
+              Enter your secret passphrase to decrypt stored API keys. 
+              First time? Enter a new passphrase to initialize your local browser vault.
             </p>
             <input
               type="password"
@@ -82,15 +85,15 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
               onChange={(e) => setLocalPassphrase(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
               placeholder="Enter passphrase..."
-              className="w-full bg-studio-bg border border-studio-border rounded px-3 py-2 text-studio-text font-mono text-sm outline-none focus:border-studio-accent mb-3"
+              className="w-full bg-black/40 border border-studio-border rounded px-3 py-2 text-studio-text font-mono text-sm outline-none focus:border-studio-accent focus:shadow-[0_0_15px_rgba(124,109,255,0.25)] transition-all mb-1"
               autoFocus
             />
-            {error && <p className="text-studio-danger text-sm mb-3">{error}</p>}
+            {error && <p className="text-studio-danger text-xs font-mono">{error}</p>}
             <button
               onClick={handleUnlock}
-              className="w-full bg-studio-accent hover:bg-studio-accent-dim text-white rounded py-2 font-display font-medium transition-colors"
+              className="interactive-btn w-full bg-studio-accent hover:bg-studio-accent-dim text-white rounded-full py-2 font-display font-bold text-sm tracking-wide transition-all shadow-[0_4px_15px_rgba(124,109,255,0.3)]"
             >
-              Unlock
+              Unlock Vault
             </button>
           </div>
         )}
