@@ -80,6 +80,7 @@ function App() {
         <div className="ambient-orb-2" />
         <div className="ambient-orb-3" />
       </div>
+      <div className="ambient-grid" />
 
       <div className="relative z-10 flex flex-col h-full">
         <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />

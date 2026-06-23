@@ -61,7 +61,7 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="glass-panel rounded-lg w-full max-w-lg p-6 animate-slide-up shadow-[0_0_50px_rgba(124,109,255,0.15)]">
         <div className="flex items-center justify-between mb-4 border-b border-studio-border pb-3">
           <div className="flex items-center gap-2">
