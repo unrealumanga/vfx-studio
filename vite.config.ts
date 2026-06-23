@@ -10,6 +10,12 @@ export default defineConfig({
       'https://vfx-studio-proxy.unrealumanga.workers.dev'
     ),
   },
+  optimizeDeps: {
+    exclude: ['@xenova/transformers'],
+  },
+  worker: {
+    format: 'es',
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,

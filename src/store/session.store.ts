@@ -49,6 +49,7 @@ interface SessionState {
   setGoogleModel: (v: string) => void;
   setVideoDuration: (v: number) => void;
   setAnchor: (seed: number | null, img: Blob | null) => void;
+  clearAnchor: () => void;
   buildRequest: () => GenerationRequest;
 }
 
@@ -95,6 +96,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setGoogleModel: (googleModel) => set({ googleModel }),
   setVideoDuration: (_videoDuration) => set({ _videoDuration }),
   setAnchor: (anchorSeed, anchorImage) => set({ anchorSeed, anchorImage }),
+  clearAnchor: () => set({ anchorSeed: null, anchorImage: null }),
 
   buildRequest: (): GenerationRequest => {
     const s = get();

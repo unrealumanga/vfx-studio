@@ -108,34 +108,37 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     }
   },
 
-  search: async (query: string, topK = 5) => {
+  search: async (query: string, topK = 5): Promise<string[]> => {
     const { worker, db, isReady } = get();
     if (!worker || !db || !isReady || !query.trim()) return [];
 
-    return new Promise((resolve) => {
-      const searchId = Date.now();
-      
-      const onMessage = async (e: MessageEvent) => {
-        if (e.data.type === 'result' && e.data.id === searchId) {
-          worker.removeEventListener('message', onMessage);
-          
-          const queryEmbedding = e.data.embedding;
-          const allEntries: PromptEntry[] = await db.getAll(STORE_NAME);
-          
-          // Calculate similarities
-          const scored = allEntries.map(entry => ({
-            text: entry.text,
-            score: cosineSimilarity(queryEmbedding, entry.embedding)
-          }));
-          
-          // Sort and return top K
-          scored.sort((a, b) => b.score - a.score);
-          resolve(scored.slice(0, topK).map(s => s.text));
-        }
-      };
-      
-      worker.addEventListener('message', onMessage);
-      worker.postMessage({ type: 'embed', text: query, id: searchId });
-    });
+    try {
+      const queryEmbedding = await new Promise<number[]>((resolve, reject) => {
+        const id = `search_${Date.now()}`;
+        const handler = (e: MessageEvent) => {
+          if (e.data.id === id) {
+            worker.removeEventListener('message', handler);
+            if (e.data.type === 'result') resolve(e.data.embedding);
+            else reject(new Error(e.data.error || 'Embedding failed'));
+          }
+        };
+        worker.addEventListener('message', handler);
+        worker.postMessage({ type: 'embed', text: query, id });
+      });
+
+      const allEntries: PromptEntry[] = await db.getAll(STORE_NAME);
+      const scored = allEntries
+        .map(entry => ({
+          text: entry.text,
+          score: cosineSimilarity(queryEmbedding, entry.embedding)
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+
+      return scored.map(s => s.text);
+    } catch (error) {
+      console.error("Autocomplete search error:", error);
+      return [];
+    }
   }
 }));
