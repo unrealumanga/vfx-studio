@@ -18,10 +18,10 @@ export default function HistoryStrip() {
   };
 
   return (
-    <div className="bg-studio-surface border-t border-studio-border px-4 py-2">
+    <div className="glass-panel border-t border-studio-border/30 px-4 py-3 shrink-0 select-none">
       <div className="flex items-center gap-2">
-        <span className="text-studio-muted text-xs font-mono shrink-0">▸</span>
-        <div className="flex gap-2 overflow-x-auto flex-1 scrollbar-thin">
+        <span className="text-studio-accent text-xs font-mono shrink-0 animate-pulse">▸ HISTORY</span>
+        <div className="flex gap-2 overflow-x-auto flex-1 scrollbar-none scroll-smooth py-0.5">
           {entries.map((entry) => (
             <button
               key={entry.id}

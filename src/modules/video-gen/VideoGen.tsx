@@ -106,18 +106,23 @@ export default function VideoGen() {
       )}
 
       <div>
-        <label className="text-studio-muted text-xs font-mono block mb-1">
-          Duration — {_videoDuration}s
+        <label className="text-studio-muted text-xs font-mono block mb-1.5">
+          Duration
         </label>
-        <input
-          type="range" min={4} max={8} step={2} value={_videoDuration}
-          onChange={(e) => {
-            setVideoDuration(Number(e.target.value));
-          }}
-          className="w-full accent-studio-accent"
-        />
-        <div className="flex justify-between text-studio-muted text-xs font-mono mt-0.5">
-          <span>4s</span><span>6s</span><span>8s</span>
+        <div className="grid grid-cols-2 gap-2">
+          {[5, 8].map((d) => (
+            <button
+              key={d}
+              onClick={() => setVideoDuration(d)}
+              className={`text-xs py-1.5 rounded font-mono transition-all duration-200 interactive-btn ${
+                _videoDuration === d
+                  ? 'bg-studio-accent text-white shadow-[0_2px_8px_rgba(136,206,2,0.3)]'
+                  : 'bg-studio-bg border border-studio-border text-studio-muted hover:text-studio-text'
+              }`}
+            >
+              {d} Seconds
+            </button>
+          ))}
         </div>
       </div>
 

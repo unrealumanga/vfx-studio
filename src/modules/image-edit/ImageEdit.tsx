@@ -184,14 +184,24 @@ export default function ImageEdit() {
 
       <div className="flex gap-2">
         <button
-          onClick={() => {
+          onClick={async () => {
             const session = useSessionStore.getState();
             const result = session.currentResult;
-            if (result?.blob) {
-              setReferenceImage(result.blob);
+            if (result) {
+              if (result.blob) {
+                setReferenceImage(result.blob);
+              } else if (result.url) {
+                try {
+                  const res = await fetch(result.url);
+                  const blob = await res.blob();
+                  setReferenceImage(blob);
+                } catch (e) {
+                  console.error("Failed to load result image as reference:", e);
+                }
+              }
             }
           }}
-          className="w-full text-xs text-studio-muted hover:text-studio-text bg-studio-bg border border-studio-border rounded py-1.5 font-mono transition-colors"
+          className="w-full text-xs text-studio-muted hover:text-studio-accent bg-studio-bg border border-studio-border rounded py-1.5 font-mono transition-colors interactive-btn"
         >
           ↻ Use current result
         </button>

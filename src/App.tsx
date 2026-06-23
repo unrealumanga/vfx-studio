@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import ToolSwitcher from './components/ToolSwitcher/ToolSwitcher';
 import PromptBar from './components/PromptBar/PromptBar';
 import ResultCanvas from './components/ResultCanvas/ResultCanvas';
@@ -19,15 +20,15 @@ import { generateImage } from './modules/image-gen/imageGen.service';
 import { editImage } from './modules/image-edit/imageEdit.service';
 import { generateVideo } from './modules/video-gen/videoGen.service';
 import { generateVfx } from './modules/vfx-compose/vfxCompose.service';
-import { generateArchViz } from './modules/archviz/archviz.service';
-import { upscaleImage } from './modules/upscale/upscale.service';
-import { assistPrompt } from './modules/prompt-assist/promptAssist.service';
 
 function App() {
   const [keyVaultOpen, setKeyVaultOpen] = useState(false);
   const { activeTask } = useSessionStore();
   const { availableProviders } = useKeysStore();
   const initPromptStore = usePromptStore(s => s.init);
+
+  const dotRef = useRef<HTMLDivElement>(null);
+  const outlineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const hasKeys = availableProviders().length > 0;
@@ -36,6 +37,27 @@ function App() {
     }
     // Initialize embedding worker for prompt autocomplete
     initPromptStore();
+
+    // GSAP Custom Cursor Trailing Effect
+    const cursorDot = dotRef.current;
+    const cursorOutline = outlineRef.current;
+
+    if (cursorDot && cursorOutline && window.matchMedia('(pointer: fine)').matches) {
+      const xToDot = gsap.quickTo(cursorDot, "x", { duration: 0.08, ease: "power3" });
+      const yToDot = gsap.quickTo(cursorDot, "y", { duration: 0.08, ease: "power3" });
+      const xToOutline = gsap.quickTo(cursorOutline, "x", { duration: 0.25, ease: "power3" });
+      const yToOutline = gsap.quickTo(cursorOutline, "y", { duration: 0.25, ease: "power3" });
+
+      const onMouseMove = (e: MouseEvent) => {
+        xToDot(e.clientX);
+        yToDot(e.clientY);
+        xToOutline(e.clientX);
+        yToOutline(e.clientY);
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      return () => window.removeEventListener('mousemove', onMouseMove);
+    }
   }, []);
 
   const handleGenerate = () => {
@@ -53,16 +75,10 @@ function App() {
         generateVfx();
         break;
       case 'archviz':
-        generateArchViz();
         break;
       case 'upscale':
-        upscaleImage();
         break;
       case 'prompt-assist':
-        assistPrompt();
-        break;
-      case 'model-tournament':
-        // Tournament is handled inside the component
         break;
     }
   };
@@ -82,7 +98,11 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col relative overflow-hidden text-studio-text select-none">
+    <div className="md:h-screen flex flex-col relative md:overflow-hidden text-studio-text select-none min-h-screen">
+      {/* GSAP Cursor Primitives */}
+      <div ref={dotRef} className="cursor-dot hidden md:block" />
+      <div ref={outlineRef} className="cursor-outline hidden md:block" />
+
       {/* 🎭 Ambient Living backdrops */}
       <div className="ambient-container">
         <div className="ambient-orb-1" />
@@ -98,15 +118,15 @@ function App() {
           <PromptBar onGenerate={handleGenerate} />
         </div>
 
-        <div className="flex-1 flex gap-4 px-4 pb-2 min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row gap-4 px-4 pb-2 min-h-0">
           <div 
-            className="flex-1 glass-panel rounded-lg overflow-hidden animate-slide-up"
+            className="flex-1 glass-panel rounded-lg overflow-hidden animate-slide-up h-[400px] md:h-full relative"
             style={{ animationDelay: '100ms' }}
           >
             <ResultCanvas />
           </div>
           <div 
-            className="w-56 shrink-0 glass-panel rounded-lg p-3 overflow-y-auto animate-slide-up"
+            className="w-full md:w-56 shrink-0 glass-panel rounded-lg p-3 overflow-y-auto animate-slide-up"
             style={{ animationDelay: '200ms' }}
           >
             {renderModuleControls()}
