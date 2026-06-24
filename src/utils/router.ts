@@ -16,7 +16,7 @@ const ADAPTERS: Record<string, BaseAdapter> = {
 const TASK_PRIORITY: Record<Task, ProviderKey[]> = {
   'image-gen':      ['google', 'openai', 'replicate', 'fal'],
   'image-edit':     ['openai', 'google', 'replicate'],
-  'video-gen':      ['google', 'runway', 'fal'],
+  'video-gen':      ['google', 'runway', 'fal'], // V7 Include google, runway, fal for video-gen
   'vfx-compose':    ['runway', 'fal', 'replicate'],
   'archviz':        ['google', 'replicate', 'fal'],
   'upscale':        ['google', 'replicate', 'fal'],

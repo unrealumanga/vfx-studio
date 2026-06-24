@@ -24,6 +24,9 @@ interface SessionState {
   // Google Model Override
   googleModel: string;
 
+  // V7 Video Model Override state
+  videoModel: string;
+
   // Video Duration State
   _videoDuration: number;
 
@@ -47,6 +50,7 @@ interface SessionState {
   setArchvizTimeOfDay: (v: string) => void;
   setArchvizMaterialStyle: (v: string) => void;
   setGoogleModel: (v: string) => void;
+  setVideoModel: (v: string) => void;
   setVideoDuration: (v: number) => void;
   setAnchor: (seed: number | null, img: Blob | null) => void;
   clearAnchor: () => void;
@@ -73,6 +77,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   archvizMaterialStyle: 'concrete-glass',
 
   googleModel: 'nano-banana-2',
+  videoModel: 'veo-2.0-generate-001', // V7 videoModel default
   _videoDuration: 8,
 
   anchorSeed: null,
@@ -94,6 +99,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setArchvizTimeOfDay: (archvizTimeOfDay) => set({ archvizTimeOfDay }),
   setArchvizMaterialStyle: (archvizMaterialStyle) => set({ archvizMaterialStyle }),
   setGoogleModel: (googleModel) => set({ googleModel }),
+  setVideoModel: (videoModel) => set({ videoModel }),
   setVideoDuration: (_videoDuration) => set({ _videoDuration }),
   setAnchor: (anchorSeed, anchorImage) => set({ anchorSeed, anchorImage }),
   clearAnchor: () => set({ anchorSeed: null, anchorImage: null }),
@@ -117,6 +123,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       seed,
       metadata: {
         googleModel: s.googleModel,
+        videoModel: s.videoModel,   // V7 Add videoModel to metadata!
       },
     };
   },

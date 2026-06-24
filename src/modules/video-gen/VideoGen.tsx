@@ -1,173 +1,99 @@
-import { useRef, useEffect, useState } from 'react';
 import { useSessionStore } from '../../store/session.store';
 import ModelBadge from '../../components/ModelBadge/ModelBadge';
 import { pickAdapter } from '../../utils/router';
 import { useKeysStore } from '../../store/keys.store';
+import { generateVideo } from './videoGen.service';
 
-type VideoMode = 'text' | 'image' | 'start-end';
+// Video model options per provider
+const VIDEO_MODELS: Record<string, { label: string; modelId: string }[]> = {
+  google: [
+    { label: 'Veo 2', modelId: 'veo-2.0-generate-001' },
+  ],
+  runway: [
+    { label: 'Gen-2', modelId: 'gen-2' },
+    { label: 'Gen-3 Alpha', modelId: 'gen-3-alpha' },
+  ],
+  fal: [
+    { label: 'Luma Dream Machine', modelId: 'luma-dream-machine' },
+  ],
+};
 
 export default function VideoGen() {
   const {
-    aspectRatio, setAspectRatio,
-    overrideProvider, setReferenceImage, setStyleImage,
-    referenceImage, styleImage,
-    _videoDuration, setVideoDuration,
-    currentResult,
+    overrideProvider,
+    setOverrideProvider,
+    videoModel,
+    setVideoModel,
+    referenceImage,
   } = useSessionStore();
   const keys = useKeysStore((s) => s.keys);
-  const [mode, setMode] = useState<VideoMode>('text');
-  const startRef = useRef<HTMLInputElement>(null);
-  const endRef   = useRef<HTMLInputElement>(null);
-
-  const hasImageResult = currentResult?.type === 'image' && (currentResult.blob || currentResult.url);
-
-  useEffect(() => {
-    setReferenceImage(null);
-    setStyleImage(null);
-  }, [mode]);
 
   let resolved: string | null = null;
   try {
     const r = pickAdapter('video-gen', keys, overrideProvider);
     resolved = r.provider;
-  } catch { resolved = null; }
+  } catch {
+    resolved = null;
+  }
 
-  const handleStartUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setReferenceImage(f);
-  };
-
-  const handleEndUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setStyleImage(f);
+  const handleProviderChange = (provider: string) => {
+    setOverrideProvider(provider);
+    // Set default model for that provider
+    const models = VIDEO_MODELS[provider];
+    if (models && models.length > 0) {
+      setVideoModel(models[0].modelId);
+    }
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 font-body text-studio-text dark:text-white">
       <ModelBadge currentProvider={resolved} />
 
-      {hasImageResult && (
-        <button
-          onClick={async () => {
-            if (currentResult!.blob) {
-              setReferenceImage(currentResult!.blob);
-              setMode('image');
-            } else if (currentResult!.url) {
-              try {
-                const res = await fetch(currentResult!.url);
-                const blob = await res.blob();
-                setReferenceImage(blob);
-                setMode('image');
-              } catch {
-                console.error('Could not load result as video start frame');
-              }
-            }
-          }}
-          className="w-full text-[10px] font-mono py-2 rounded border border-studio-accent/40 text-studio-accent hover:bg-studio-accent/10 transition-colors flex items-center justify-center gap-1.5 interactive-btn"
-        >
-          ▶ Animate current image
-        </button>
-      )}
-
-      <div>
-        <label className="text-studio-muted text-xs font-mono block mb-1">Mode</label>
-        <div className="grid grid-cols-3 gap-1">
-          {(['text', 'image', 'start-end'] as VideoMode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`text-[10px] py-1.5 rounded font-mono transition-colors ${
-                mode === m
-                  ? 'bg-studio-accent text-white'
-                  : 'bg-studio-bg border border-studio-border text-studio-muted hover:text-studio-text'
-              }`}
-            >
-              {m === 'text' ? 'Text→Vid' : m === 'image' ? 'Img→Vid' : 'Start→End'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {mode === 'image' && (
-        <div>
-          <label className="text-studio-muted text-xs font-mono block mb-1">
-            Starting Frame
-          </label>
-          <input ref={startRef} type="file" accept="image/*"
-            onChange={handleStartUpload} className="hidden" />
-          <button
-            onClick={() => startRef.current?.click()}
-            className="w-full bg-studio-bg border border-studio-border rounded px-3 py-2 text-xs text-studio-muted font-mono hover:text-studio-text transition-colors text-left"
-          >
-            {referenceImage ? '✓ Start frame loaded' : 'Upload starting image...'}
-          </button>
-        </div>
-      )}
-
-      {mode === 'start-end' && (
-        <div className="space-y-2">
-          <div>
-            <label className="text-studio-muted text-xs font-mono block mb-1">First Frame</label>
-            <input ref={startRef} type="file" accept="image/*"
-              onChange={handleStartUpload} className="hidden" />
-            <button
-              onClick={() => startRef.current?.click()}
-              className="w-full bg-studio-bg border border-studio-border rounded px-3 py-2 text-xs text-studio-muted font-mono hover:text-studio-text transition-colors text-left"
-            >
-              {referenceImage ? '✓ First frame loaded' : 'Upload first frame...'}
-            </button>
-          </div>
-          <div>
-            <label className="text-studio-muted text-xs font-mono block mb-1">Last Frame</label>
-            <input ref={endRef} type="file" accept="image/*"
-              onChange={handleEndUpload} className="hidden" />
-            <button
-              onClick={() => endRef.current?.click()}
-              className="w-full bg-studio-bg border border-studio-border rounded px-3 py-2 text-xs text-studio-muted font-mono hover:text-studio-text transition-colors text-left"
-            >
-              {styleImage ? '✓ Last frame loaded' : 'Upload last frame...'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <label className="text-studio-muted text-xs font-mono block mb-1.5">
-          Duration
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          {[5, 8].map((d) => (
-            <button
-              key={d}
-              onClick={() => setVideoDuration(d)}
-              className={`text-xs py-1.5 rounded font-mono transition-all duration-200 interactive-btn ${
-                _videoDuration === d
-                  ? 'bg-studio-accent text-white shadow-[0_2px_8px_rgba(136,206,2,0.3)]'
-                  : 'bg-studio-bg border border-studio-border text-studio-muted hover:text-studio-text'
-              }`}
-            >
-              {d} Seconds
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="text-studio-muted text-xs font-mono block mb-1">Aspect Ratio</label>
+      <div className="space-y-2">
+        <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Provider</label>
         <select
-          value={aspectRatio}
-          onChange={(e) => setAspectRatio(e.target.value)}
-          className="w-full bg-studio-bg border border-studio-border rounded px-2 py-1.5 text-studio-text text-xs font-mono outline-none focus:border-studio-accent"
+          value={overrideProvider || ''}
+          onChange={(e) => handleProviderChange(e.target.value)}
+          className="w-full bg-white dark:bg-neutral-800 border border-studio-border dark:border-neutral-700 rounded-lg px-3 py-2 text-studio-text dark:text-white text-xs outline-none focus:border-studio-accent"
         >
-          <option value="16:9">16:9 Landscape</option>
-          <option value="9:16">9:16 Portrait</option>
-          <option value="1:1">1:1 Square</option>
+          <option value="">Auto (priority order)</option>
+          <option value="google">Google (Veo 2)</option>
+          <option value="runway">RunwayML</option>
+          <option value="fal">Fal.ai</option>
         </select>
       </div>
 
-      <p className="text-studio-muted text-xs font-mono">
-        ⏱ Video generation takes 2–5 minutes. Page will update when ready.
-      </p>
+      {overrideProvider && VIDEO_MODELS[overrideProvider] && (
+        <div className="space-y-2">
+          <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Model</label>
+          <select
+            value={videoModel}
+            onChange={(e) => setVideoModel(e.target.value)}
+            className="w-full bg-white dark:bg-neutral-800 border border-studio-border dark:border-neutral-700 rounded-lg px-3 py-2 text-studio-text dark:text-white text-xs outline-none focus:border-studio-accent"
+          >
+            {VIDEO_MODELS[overrideProvider].map((m) => (
+              <option key={m.modelId} value={m.modelId}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="space-y-2 pt-2 border-t border-studio-border-light dark:border-neutral-700">
+        <button
+          onClick={() => generateVideo()}
+          disabled={!referenceImage}
+          className="w-full btn-primary py-2.5 rounded-full text-xs uppercase tracking-wider font-semibold shadow-md interactive-btn disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Generate Video
+        </button>
+        {!referenceImage && (
+          <p className="text-studio-faded text-[10px] font-mono text-center">
+            Please upload a reference image in the main canvas first.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// src/adapters/google.ts — Full V3 replacement
+// src/adapters/google.ts — V7 updated with dynamic videoModel resolving
 
 import type { BaseAdapter, GenerationRequest, GenerationResult } from './_base';
 
@@ -11,7 +11,7 @@ export const GOOGLE_IMAGE_MODELS = {
 export type GoogleImageModel = keyof typeof GOOGLE_IMAGE_MODELS;
 
 const DEFAULT_IMAGE_MODEL: GoogleImageModel = 'nano-banana-2';
-const VEO_MODEL     = 'veo-2.0-generate-001';
+const DEFAULT_VEO_MODEL   = 'veo-2.0-generate-001';
 const GEMINI_BASE   = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 function pickImageModel(req: GenerationRequest): string {
@@ -197,6 +197,9 @@ async function generateVideo(
   req: GenerationRequest, apiKey: string, start: number
 ): Promise<GenerationResult> {
   const veoBase  = 'https://generativelanguage.googleapis.com/v1beta';
+  
+  // Resolve V7 custom video model ID dynamically from metadata if present
+  const activeVideoModel = req.metadata?.videoModel as string || DEFAULT_VEO_MODEL;
 
   const instances: Record<string, unknown> = {
     prompt: req.prompt,
@@ -227,7 +230,7 @@ async function generateVideo(
 
   try {
     const initRes = await fetch(
-      `${veoBase}/models/${VEO_MODEL}:predictLongRunning?key=${apiKey}`,
+      `${veoBase}/models/${activeVideoModel}:predictLongRunning?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -268,7 +271,7 @@ async function generateVideo(
           return {
             type: 'video',
             url: downloadUrl.toString(),
-            model: VEO_MODEL,
+            model: activeVideoModel,
             provider: 'google',
             durationMs: Date.now() - start,
           };
@@ -284,7 +287,7 @@ async function generateVideo(
         return {
           type: 'video',
           blob: typedBlob,
-          model: VEO_MODEL,
+          model: activeVideoModel,
           provider: 'google',
           durationMs: Date.now() - start,
         };

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── Color Palette & Theme Shift ──────────────────────────────── */
+/* ── Color Palette & Theme Shift (Minimalist Quiet Gray Theme) ── */
 :root {
   --bg-primary: #FFFFFF;
   --bg-secondary: #FAFAFA;
@@ -8,8 +8,8 @@
   --text-primary: #111111;
   --text-secondary: #555555;
   --text-tertiary: #999999;
-  --accent-red: #E84040;
-  --accent-red-hover: #CC3333;
+  --accent-red: #111111;            /* Remapped from Red to premium minimalist dark gray/black */
+  --accent-red-hover: #444444;      /* Hover gray */
   --accent-gold: #D4A853;
   --accent-silver: #A8A8A8;
   --accent-bronze: #CD7F32;
@@ -17,21 +17,35 @@
   --border: #E5E5E5;
 }
 
+/* Soft Dark Mode overrides */
+.dark {
+  --bg-primary: #121212;            /* Luxurious soft dark background */
+  --bg-secondary: #1E1E1E;          /* Warm charcoal panels */
+  --bg-tertiary: #2D2D2D;
+  --text-primary: #FAFAFA;          /* Off-white text */
+  --text-secondary: #A0A0A0;        /* Muted gray text */
+  --text-tertiary: #666666;
+  --accent-red: #FAFAFA;            /* Accent remapped to light gray/white in dark mode */
+  --accent-red-hover: #CCCCCC;
+  --border-light: #2A2D2D;
+  --border: #3D3D3D;
+}
+
 @theme {
-  --color-studio-bg: #FFFFFF;
-  --color-studio-surface: #FAFAFA;
-  --color-studio-border: #E5E5E5;
-  --color-studio-border-light: #EEEEEE;
-  --color-studio-accent: #E84040;
-  --color-studio-accent-dim: #CC3333;
+  --color-studio-bg: var(--bg-primary);
+  --color-studio-surface: var(--bg-secondary);
+  --color-studio-border: var(--border);
+  --color-studio-border-light: var(--border-light);
+  --color-studio-accent: var(--accent-red);
+  --color-studio-accent-dim: var(--accent-red-hover);
   --color-studio-purple: #8a3ffc;
   --color-studio-cyan: #00b4d8;
-  --color-studio-gold: #D4A853;
-  --color-studio-silver: #A8A8A8;
-  --color-studio-bronze: #CD7F32;
-  --color-studio-text: #111111;
-  --color-studio-muted: #555555;
-  --color-studio-faded: #999999;
+  --color-studio-gold: var(--accent-gold);
+  --color-studio-silver: var(--accent-silver);
+  --color-studio-bronze: var(--accent-bronze);
+  --color-studio-text: var(--text-primary);
+  --color-studio-muted: var(--text-secondary);
+  --color-studio-faded: var(--text-tertiary);
   --color-studio-danger: #E84040;
   --color-studio-success: #10B981;
 
@@ -70,6 +84,7 @@ html {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 body {
@@ -117,12 +132,16 @@ a, button, select, input, textarea, [role="button"] { cursor: pointer !important
 
 .btn-primary {
   background: var(--accent-red);
-  color: #FFFFFF;
+  color: var(--bg-primary);       /* High contrast text color dynamically map */
   font-family: var(--font-display);
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.25s ease;
+  border: 1px solid var(--accent-red);
 }
-.btn-primary:hover { background: var(--accent-red-hover); }
+.btn-primary:hover { 
+  background: var(--accent-red-hover); 
+  border-color: var(--accent-red-hover); 
+}
 
 .btn-outline {
   background: transparent;
@@ -167,7 +186,7 @@ a, button, select, input, textarea, [role="button"] { cursor: pointer !important
   font-family: var(--font-body);
   font-weight: 500;
   color: var(--text-secondary);
-  background: #FFFFFF;
+  background: var(--bg-primary);
   border: 1px solid var(--border);
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   transition: all 0.2s ease;
@@ -178,8 +197,8 @@ a, button, select, input, textarea, [role="button"] { cursor: pointer !important
 .action-pill:hover {
   background: var(--accent-red);
   border-color: var(--accent-red);
-  color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(232, 64, 64, 0.15);
+  color: var(--bg-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
 
@@ -187,7 +206,6 @@ a, button, select, input, textarea, [role="button"] { cursor: pointer !important
 .mask-canvas-container canvas {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-radius: 0.5rem;
-  background-color: #000000;
 }
 
 /* ── Modern Spinner ───────────────────────────────────────────── */
