@@ -1,19 +1,13 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef } from 'react';
 import { useSessionStore } from '../../store/session.store';
 import ModelBadge from '../../components/ModelBadge/ModelBadge';
 import { pickAdapter } from '../../utils/router';
 import { useKeysStore } from '../../store/keys.store';
-import { Canvas, Image as FabricImage, PencilBrush } from 'fabric';
 
 export default function ImageEdit() {
   const { referenceImage, setReferenceImage, setMaskImage, overrideProvider, googleModel, setGoogleModel } = useSessionStore();
   const keys = useKeysStore((s) => s.keys);
   const fileRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricRef = useRef<Canvas | null>(null);
-  const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
-  const [brushSize, setBrushSize] = useState(20);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   let resolved: string | null = null;
   try {
@@ -23,118 +17,30 @@ export default function ImageEdit() {
     resolved = null;
   }
 
-  useEffect(() => {
-    if (referenceImage) {
-      const url = URL.createObjectURL(referenceImage);
-      setImageUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setImageUrl(null);
-    }
-  }, [referenceImage]);
-
-  useEffect(() => {
-    if (!canvasRef.current || !imageUrl) return;
-
-    const imgElement = document.createElement('img');
-    imgElement.src = imageUrl;
-    imgElement.onload = () => {
-      const containerWidth = canvasRef.current?.parentElement?.clientWidth ?? 512;
-      const maxWidth = Math.min(512, containerWidth);
-      const scale = maxWidth / imgElement.width;
-      const canvasWidth = maxWidth;
-      const canvasHeight = imgElement.height * scale;
-
-      const fCanvas = new Canvas(canvasRef.current!, {
-        width: canvasWidth,
-        height: canvasHeight,
-        isDrawingMode: true,
-      });
-
-      const brush = new PencilBrush(fCanvas);
-      brush.color = '#ffffff';
-      brush.width = brushSize;
-      fCanvas.freeDrawingBrush = brush;
-
-      FabricImage.fromURL(imageUrl).then((fImg) => {
-        fImg.scale(scale);
-        fCanvas.backgroundImage = fImg;
-        fCanvas.renderAll();
-      });
-
-      fabricRef.current = fCanvas;
-      setFabricCanvas(fCanvas);
-
-      fCanvas.on('path:created', () => {
-        updateMask(fCanvas);
-      });
-    };
-
-    return () => {
-      fabricRef.current?.dispose();
-      fabricRef.current = null;
-    };
-  }, [imageUrl]);
-
-  useEffect(() => {
-    if (fabricCanvas && fabricCanvas.freeDrawingBrush) {
-      fabricCanvas.freeDrawingBrush.width = brushSize;
-    }
-  }, [brushSize, fabricCanvas]);
-
-  const updateMask = (canvasInstance: Canvas) => {
-    const originalBgImage = canvasInstance.backgroundImage;
-    
-    canvasInstance.backgroundImage = undefined as any;
-    canvasInstance.backgroundColor = '#000000';
-    canvasInstance.renderAll();
-
-    const dataUrl = canvasInstance.toDataURL({ format: 'png', multiplier: 1 });
-
-    canvasInstance.backgroundImage = originalBgImage;
-    canvasInstance.backgroundColor = '';
-    canvasInstance.renderAll();
-
-    fetch(dataUrl)
-      .then((res) => res.blob())
-      .then((blob) => setMaskImage(blob));
-  };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setReferenceImage(file);
-  };
-
-  const handleClearMask = () => {
-    if (fabricCanvas) {
-      fabricCanvas.clear();
-      if (imageUrl) {
-        FabricImage.fromURL(imageUrl).then((fImg) => {
-          const containerWidth = canvasRef.current?.parentElement?.clientWidth ?? 512;
-          const maxWidth = Math.min(512, containerWidth);
-          const scale = maxWidth / fImg.width!;
-          fImg.scale(scale);
-          fabricCanvas.backgroundImage = fImg;
-          fabricCanvas.renderAll();
-          setMaskImage(null);
-        });
-      }
+    if (file) {
+      setReferenceImage(file);
+      setMaskImage(null); // Reset any existing mask on new uploads
     }
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 font-body">
+      
+      {/* Dynamic Model Badge */}
       <div className="flex items-center gap-2">
         <ModelBadge currentProvider={resolved} />
       </div>
 
+      {/* Model Selection Dropdown */}
       {resolved === 'google' && (
-        <div>
-          <label className="text-studio-muted text-xs font-mono block mb-1">Google Model</label>
+        <div className="space-y-1">
+          <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Google Model</label>
           <select
             value={googleModel}
             onChange={(e) => setGoogleModel(e.target.value)}
-            className="w-full bg-studio-bg border border-studio-border rounded px-2 py-1.5 text-studio-text text-xs font-mono outline-none focus:border-studio-accent"
+            className="w-full bg-white border border-studio-border rounded-lg px-3 py-2 text-studio-text text-xs outline-none focus:border-studio-accent"
           >
             <option value="nano-banana">Nano Banana (fast)</option>
             <option value="nano-banana-2">Nano Banana 2 (default)</option>
@@ -143,46 +49,47 @@ export default function ImageEdit() {
         </div>
       )}
 
-      <div>
-        <label className="text-studio-muted text-xs font-mono block mb-1">Reference Image</label>
-        <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+      {/* Upload Reference Image Slot */}
+      <div className="space-y-2">
+        <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Reference Image</label>
+        <input 
+          ref={fileRef} 
+          type="file" 
+          accept="image/*" 
+          onChange={handleImageUpload} 
+          className="hidden" 
+        />
+        
         <button
           onClick={() => fileRef.current?.click()}
-          className="w-full bg-studio-bg border border-studio-border rounded px-3 py-2 text-xs text-studio-muted font-mono hover:text-studio-text transition-colors text-left"
+          className="w-full text-xs py-2 px-3 border border-studio-border rounded-lg text-studio-muted hover:text-studio-text hover:border-neutral-500 bg-white transition-all text-left flex items-center justify-between"
         >
-          {referenceImage ? '✓ Image loaded' : 'Click to upload image...'}
+          <span>{referenceImage ? '✓ Image uploaded' : 'Select file...'}</span>
+          <span className="text-[10px] uppercase font-mono text-studio-faded">Upload</span>
         </button>
       </div>
 
-      {imageUrl && (
-        <div className="space-y-2">
-          <label className="text-studio-muted text-xs font-mono block">Draw Mask (White brush)</label>
-          <div className="border border-studio-border rounded bg-black/50 p-1 flex justify-center">
-            <canvas ref={canvasRef} />
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <label className="text-studio-muted text-xs font-mono">Brush Size</label>
-            <input
-              type="range"
-              min="5"
-              max="100"
-              value={brushSize}
-              onChange={(e) => setBrushSize(Number(e.target.value))}
-              className="w-24 accent-studio-accent"
-            />
-          </div>
-
+      {/* Help info when image is loaded */}
+      {referenceImage && (
+        <div className="p-3 bg-studio-surface border border-studio-border-light rounded-lg space-y-1.5 animate-slide-up">
+          <p className="text-[10px] font-mono text-studio-accent uppercase tracking-wider font-semibold">Workspace Active</p>
+          <p className="text-studio-muted text-[11px] leading-relaxed">
+            Strokes drawn directly on the main panel over your image define the mask.
+          </p>
           <button
-            onClick={handleClearMask}
-            className="w-full text-xs text-studio-danger bg-studio-bg border border-studio-border hover:border-studio-danger rounded py-1.5 font-mono transition-colors"
+            onClick={() => {
+              setReferenceImage(null);
+              setMaskImage(null);
+            }}
+            className="w-full text-[10px] text-studio-danger bg-white border border-studio-border hover:border-studio-danger rounded py-1 font-mono transition-colors uppercase tracking-wider mt-1"
           >
-            Clear Mask
+            Clear reference & mask
           </button>
         </div>
       )}
 
-      <div className="flex gap-2">
+      {/* Auxiliary actions */}
+      <div className="pt-2 border-t border-studio-border-light space-y-2">
         <button
           onClick={async () => {
             const session = useSessionStore.getState();
@@ -190,18 +97,20 @@ export default function ImageEdit() {
             if (result) {
               if (result.blob) {
                 setReferenceImage(result.blob);
+                setMaskImage(null);
               } else if (result.url) {
                 try {
                   const res = await fetch(result.url);
                   const blob = await res.blob();
                   setReferenceImage(blob);
+                  setMaskImage(null);
                 } catch (e) {
                   console.error("Failed to load result image as reference:", e);
                 }
               }
             }
           }}
-          className="w-full text-xs text-studio-muted hover:text-studio-accent bg-studio-bg border border-studio-border rounded py-1.5 font-mono transition-colors interactive-btn"
+          className="w-full text-xs text-studio-muted hover:text-studio-accent hover:border-studio-accent bg-white border border-studio-border rounded-lg py-2 font-mono transition-colors interactive-btn uppercase tracking-wider text-center"
         >
           ↻ Use current result
         </button>

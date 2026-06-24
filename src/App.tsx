@@ -24,6 +24,7 @@ function App() {
   const { activeTask } = useSessionStore();
   const { availableProviders } = useKeysStore();
   const initPromptStore = usePromptStore(s => s.init);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
 
   useEffect(() => {
     const hasKeys = availableProviders().length > 0;
@@ -54,37 +55,68 @@ function App() {
   };
 
   return (
-    <div className="md:h-screen flex flex-col relative md:overflow-hidden text-studio-text select-none min-h-screen">
-      <div className="ambient-container" />
-      <div className="ambient-accent" />
+    <div className="flex flex-col min-h-screen h-screen bg-studio-bg text-studio-text overflow-hidden select-none font-body">
+      {/* 1. Header Navigation */}
+      <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />
 
-      <div className="relative z-10 flex flex-col h-full">
-        <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />
-
-        <div className="px-4 pt-3 pb-2 animate-slide-up">
-          <PromptBar onGenerate={handleGenerate} />
+      {/* 2. Main Centered Workspace Area */}
+      <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 min-h-0 overflow-hidden">
+        {/* Left/Main Column: Result Display or Canvas masking */}
+        <div className="flex-1 flat-panel rounded-xl overflow-hidden relative flex flex-col min-h-0 bg-studio-surface border border-studio-border">
+          <ResultCanvas />
         </div>
 
-        <div className="flex-1 flex flex-col md:flex-row gap-4 px-4 pb-2 min-h-0">
-          <div
-            className="flex-1 glass-panel rounded-lg overflow-hidden animate-slide-up h-[400px] md:h-full relative"
-            style={{ animationDelay: '100ms' }}
-          >
-            <ResultCanvas />
-          </div>
-          <div
-            className="w-full md:w-56 shrink-0 glass-panel rounded-lg p-3 overflow-y-auto animate-slide-up"
-            style={{ animationDelay: '200ms' }}
-          >
-            {renderModuleControls()}
-          </div>
-        </div>
+        {/* Right Column: Parameters Panel (Collapsible) */}
+        <div className={`w-full shrink-0 transition-all duration-300 md:h-full flex flex-col ${panelCollapsed ? 'md:w-16 h-12 md:h-full' : 'md:w-64'}`}>
+          <div className="flex-1 flat-panel rounded-xl p-4 overflow-y-auto bg-studio-surface border border-studio-border flex flex-col gap-4">
+            
+            {/* Header control with collapse toggle */}
+            <div className="flex items-center justify-between border-b border-studio-border-light pb-2 shrink-0">
+              <h3 className={`font-display font-semibold text-xs tracking-wider text-studio-muted uppercase ${panelCollapsed ? 'hidden' : ''}`}>
+                // Parameters
+              </h3>
+              <button
+                onClick={() => setPanelCollapsed(!panelCollapsed)}
+                className="text-studio-muted hover:text-studio-accent font-mono text-sm leading-none p-1 hover:bg-studio-border rounded transition-colors"
+                title={panelCollapsed ? "Expand side controls" : "Collapse side controls"}
+              >
+                {panelCollapsed ? '▸' : '◂'}
+              </button>
+            </div>
+            
+            {/* Controls body */}
+            <div className={`flex-1 min-h-0 ${panelCollapsed ? 'hidden' : 'flex flex-col'}`}>
+              {renderModuleControls()}
+            </div>
+            
+            {/* Collapsed placeholder indicator */}
+            {panelCollapsed && (
+              <div 
+                onClick={() => setPanelCollapsed(false)}
+                className="hidden md:flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer text-studio-faded hover:text-studio-accent transition-colors"
+                title="Expand side controls"
+              >
+                <div className="text-xs tracking-widest font-mono uppercase [writing-mode:vertical-lr] select-none opacity-50">
+                  Settings
+                </div>
+              </div>
+            )}
 
-        <div className="animate-slide-up" style={{ animationDelay: '300ms' }}>
-          <HistoryStrip />
+          </div>
         </div>
       </div>
 
+      {/* 3. History timeline strip */}
+      <div className="px-6 pb-2">
+        <HistoryStrip />
+      </div>
+
+      {/* 4. Bottom fixed/centered Prompt Input Bar */}
+      <div className="px-6 pb-6 pt-2 w-full max-w-4xl mx-auto shrink-0">
+        <PromptBar onGenerate={handleGenerate} />
+      </div>
+
+      {/* 5. Key Decryption Settings Panel */}
       <KeyVault open={keyVaultOpen} onClose={() => setKeyVaultOpen(false)} />
     </div>
   );

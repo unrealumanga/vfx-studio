@@ -1,81 +1,58 @@
-import { useState } from 'react';
 import type { Task } from '../../adapters/_base';
 import { useSessionStore } from '../../store/session.store';
 
 const TOOLS: { id: Task; label: string }[] = [
-  { id: 'image-gen', label: 'Gen' },
-  { id: 'image-edit', label: 'Edit' },
-  { id: 'video-gen', label: 'Video' },
-  { id: 'vfx-compose', label: 'VFX' },
+  { id: 'image-gen', label: 'Generate' },
+  { id: 'image-edit', label: 'Inpaint & Edit' },
+  { id: 'video-gen', label: 'Motion & Video' },
+  { id: 'vfx-compose', label: 'VFX Composer' },
   { id: 'archviz', label: 'ArchViz' },
-  { id: 'upscale', label: '↑Scale' },
-  { id: 'prompt-assist', label: 'Prompt' },
+  { id: 'upscale', label: '↑Scale & Detail' },
+  { id: 'prompt-assist', label: 'Prompt Assist' },
 ];
 
 interface ToolSwitcherProps {
   onOpenKeys: () => void;
 }
 
-function scrambleText(targetText: string, onUpdate: (val: string) => void) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+{}|:"<>?';
-  let iterations = 0;
-  const interval = setInterval(() => {
-    onUpdate(
-      targetText
-        .split('')
-        .map((char, index) => {
-          if (index < iterations) return targetText[index];
-          if (char === ' ') return ' ';
-          return chars[Math.floor(Math.random() * chars.length)];
-        })
-        .join('')
-    );
-    if (iterations >= targetText.length) clearInterval(interval);
-    iterations += 1 / 3;
-  }, 30);
-}
-
 export default function ToolSwitcher({ onOpenKeys }: ToolSwitcherProps) {
   const { activeTask, setActiveTask } = useSessionStore();
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 glass-panel border-b border-studio-border/30 shrink-0 w-full overflow-hidden select-none">
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none whitespace-nowrap flex-1 mr-4 py-0.5">
-        <div className="glitch-container mr-4 shrink-0">
-          <span
-            className="glitch-text text-studio-accent font-display font-bold text-sm tracking-wider cursor-pointer"
-            data-text="VFX.STUDIO"
-          >
-            VFX.STUDIO
-          </span>
+    <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-studio-border-light shrink-0 w-full overflow-hidden select-none">
+      <div className="flex items-center gap-10 overflow-x-auto scrollbar-none whitespace-nowrap flex-1 mr-4 py-0.5">
+        
+        {/* Brand/Logo - Clean and Bold (Non-glitch) */}
+        <div 
+          onClick={() => setActiveTask('image-gen')} 
+          className="font-display text-base font-bold tracking-tight text-studio-text hover:text-studio-accent transition-colors"
+        >
+          AWWWARDS — VFX.STUDIO
         </div>
 
-        <div className="flex gap-1">
-          {TOOLS.map((tool) => {
-            const [label, setLabel] = useState(tool.label);
-            return (
-              <button
-                key={tool.id}
-                onMouseEnter={() => scrambleText(tool.label, setLabel)}
-                onClick={() => setActiveTask(tool.id)}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all duration-200 shrink-0 interactive-btn ${
-                  activeTask === tool.id
-                    ? 'bg-studio-accent text-black shadow-[0_2px_10px_rgba(0,243,255,0.3)]'
-                    : 'text-studio-muted hover:text-studio-text hover:bg-studio-border'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
+        {/* Minimal Underlined Navigation Tabs */}
+        <div className="flex gap-6 items-center">
+          {TOOLS.map((tool) => (
+            <button
+              key={tool.id}
+              onClick={() => setActiveTask(tool.id)}
+              className={`tab-link text-xs font-display font-medium tracking-wide uppercase transition-all duration-200 shrink-0 ${
+                activeTask === tool.id ? 'active' : ''
+              }`}
+            >
+              {tool.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Settings / Keys Action Button */}
       <button
         onClick={onOpenKeys}
-        className="text-studio-muted hover:text-studio-text text-xs font-mono px-2 py-1 rounded hover:bg-studio-border transition-colors shrink-0"
-        title="API Key Settings"
+        className="btn-outline px-4 py-1.5 rounded-full text-xs font-display font-medium uppercase tracking-wider transition-all shrink-0 flex items-center gap-1.5"
+        title="API Key Configuration"
       >
-        ⚙ Keys
+        <span>⚙</span> Settings
       </button>
     </div>
   );

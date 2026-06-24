@@ -4,7 +4,7 @@ import { useSessionStore } from '../../store/session.store';
 import { useHistoryStore } from '../../store/history.store';
 import { blobToBase64 } from '../../utils/blobUtils';
 
-export async function upscaleImage() {
+export async function upscaleImage(customBlob?: Blob, factor?: number) {
   const session = useSessionStore.getState();
   const keys = useKeysStore.getState().keys;
   const { addEntry } = useHistoryStore.getState();
@@ -20,10 +20,19 @@ export async function upscaleImage() {
     );
 
     const req = session.buildRequest();
+    
+    // V6 Adjustment: Overwrite with direct custom inputs if provided by quick action picker
+    if (customBlob) {
+      req.referenceImage = customBlob;
+    }
+    if (factor) {
+      req.metadata = { ...req.metadata, upscaleFactor: factor };
+    }
+
     const result = await adapter.generate(req, apiKey);
 
     session.setResult(result);
-    await addEntry(session.prompt, result, 'upscale');
+    await addEntry(session.prompt || "In-Context Quick Upscale", result, 'upscale');
   } catch (e) {
     session.setError((e as Error).message);
   } finally {
@@ -65,7 +74,6 @@ export async function professionalFinish() {
     session.setGenerating(true, 0.66); // 66% GFPGAN
     
     const gfpganModel = 'tencentarc/gfpgan:9283608cb5ee8f2e21977ec302c4b8d70dcba25db8fbdcd8d0afcfa04a8b7dd5';
-    // Let's call Replicate directly since it's a specific pipeline
     const base64Img = await blobToBase64(currentImage);
     const mime = currentImage.type || 'image/png';
     const dataUri = `data:${mime};base64,${base64Img}`;
@@ -82,7 +90,6 @@ export async function professionalFinish() {
     if (!initRes.ok) throw new Error("GFPGAN init failed");
     let pred = await initRes.json();
     
-    // Poll
     while (pred.status !== 'succeeded' && pred.status !== 'failed') {
       await new Promise(r => setTimeout(r, 2000));
       const pRes = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, { headers: { Authorization: `Bearer ${replicateKey}` }});

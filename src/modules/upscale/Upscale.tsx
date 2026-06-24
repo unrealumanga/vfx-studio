@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useSessionStore } from '../../store/session.store';
 import ModelBadge from '../../components/ModelBadge/ModelBadge';
 import { pickAdapter } from '../../utils/router';
@@ -10,6 +10,8 @@ export default function Upscale() {
   const keys = useKeysStore((s) => s.keys);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [upscaleFactor, setUpscaleFactor] = useState<number>(4);
+
   let resolved: string | null = null;
   try {
     const r = pickAdapter('upscale', keys, overrideProvider);
@@ -19,23 +21,33 @@ export default function Upscale() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 font-body">
       <ModelBadge currentProvider={resolved} />
 
-      <div>
-        <label className="text-studio-muted text-xs font-mono block mb-1">Image to Upscale</label>
-        <input ref={fileRef} type="file" accept="image/*" onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) setReferenceImage(file);
-        }} className="hidden" />
+      {/* Upload image to upscale */}
+      <div className="space-y-2">
+        <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Image to Upscale</label>
+        <input 
+          ref={fileRef} 
+          type="file" 
+          accept="image/*" 
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) setReferenceImage(file);
+          }} 
+          className="hidden" 
+        />
+        
         <button
           onClick={() => fileRef.current?.click()}
-          className="w-full bg-studio-bg border border-studio-border rounded px-3 py-2 text-xs text-studio-muted font-mono hover:text-studio-text transition-colors text-left"
+          className="w-full text-xs py-2 px-3 border border-studio-border rounded-lg text-studio-muted hover:text-studio-text hover:border-neutral-500 bg-white transition-all text-left flex items-center justify-between"
         >
-          {referenceImage ? '✓ Image loaded' : 'Click to upload image...'}
+          <span>{referenceImage ? '✓ Image loaded' : 'Select file...'}</span>
+          <span className="text-[10px] uppercase font-mono text-studio-faded">Upload</span>
         </button>
       </div>
 
+      {/* Quick Ingestion action */}
       <div className="flex gap-2">
         <button
           onClick={async () => {
@@ -55,29 +67,53 @@ export default function Upscale() {
               }
             }
           }}
-          className="w-full text-xs text-studio-muted hover:text-studio-accent bg-studio-bg border border-studio-border rounded py-1.5 font-mono transition-colors interactive-btn"
+          className="w-full text-xs text-studio-muted hover:text-studio-accent hover:border-studio-accent bg-white border border-studio-border rounded-lg py-2 font-mono transition-all uppercase tracking-wider text-center"
         >
           ↻ Use current result
         </button>
       </div>
 
+      {/* Scale Factor Selector */}
       {referenceImage && (
-        <div className="space-y-2">
+        <div className="space-y-1 animate-slide-up">
+          <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Scale Factor</label>
+          <div className="grid grid-cols-3 gap-2 bg-studio-surface border border-studio-border-light p-1 rounded-lg">
+            {[2, 3, 4].map((f) => (
+              <button
+                key={f}
+                onClick={() => setUpscaleFactor(f)}
+                className={`py-1 rounded text-xs font-mono transition-colors ${
+                  upscaleFactor === f
+                    ? 'bg-studio-accent text-white font-semibold'
+                    : 'text-studio-muted hover:bg-neutral-100 hover:text-studio-text'
+                }`}
+              >
+                {f}x
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Scale actions */}
+      {referenceImage && (
+        <div className="space-y-3 pt-2 border-t border-studio-border-light animate-slide-up">
           <button
             onClick={() => upscaleImage()}
-            className="interactive-btn w-full bg-studio-accent hover:bg-studio-accent-dim text-white font-display font-medium text-sm py-2 rounded-full transition-colors shadow-[0_4px_15px_rgba(124,109,255,0.3)]"
+            className="w-full btn-primary py-2 rounded-full text-xs uppercase tracking-wider font-semibold shadow-md interactive-btn"
           >
-            Basic Upscale
+            Basic Upscale ({upscaleFactor}x)
           </button>
           
           <button
             onClick={() => professionalFinish()}
-            className="interactive-btn w-full bg-studio-gold hover:bg-yellow-500 text-studio-bg font-display font-medium text-sm py-2 rounded-full transition-colors shadow-[0_4px_15px_rgba(245,200,66,0.3)]"
+            className="w-full btn-outline py-2 rounded-full text-xs uppercase tracking-wider font-semibold hover:border-studio-accent hover:text-studio-accent transition-colors interactive-btn"
           >
             ✨ Professional Finish Pipeline
           </button>
-          <p className="text-studio-muted text-[10px] font-mono leading-relaxed mt-1">
-            Chain: Real-ESRGAN (4x) → GFPGAN (Sharpen) → Img2Img (Tone Grade). Requires Replicate API Key.
+          
+          <p className="text-studio-faded text-[10px] font-mono leading-relaxed mt-1">
+            * Chains: Real-ESRGAN ({upscaleFactor}x) → GFPGAN Face Sharpening → Img2Img cinematic grading. Requires Replicate key.
           </p>
         </div>
       )}

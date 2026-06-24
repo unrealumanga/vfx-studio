@@ -1,8 +1,10 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useSessionStore } from '../../store/session.store';
 import { blobToUrl } from '../../utils/blobUtils';
+import MaskEditor from '../MaskEditor/MaskEditor';
+import { upscaleImage } from '../../modules/upscale/upscale.service';
 
-// Downloads a blob or fetches a URL and downloads it
+// Helper to trigger client-side file downloads
 async function downloadResult(
   blob: Blob | undefined,
   url: string | undefined,
@@ -38,46 +40,40 @@ function triggerDownload(href: string, filename: string) {
 }
 
 export default function ResultCanvas() {
-  const { currentResult, isGenerating, progress, setReferenceImage, setActiveTask } =
+  const { activeTask, currentResult, isGenerating, progress, referenceImage, setReferenceImage, setActiveTask } =
     useSessionStore();
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  if (isGenerating) {
+  // V6 In-Context Quick-Upscale states
+  const [showUpscaleOptions, setShowUpscaleOptions] = useState(false);
+  const [upscaleFactor, setUpscaleFactor] = useState(2);
+  const [isUpscalingInline, setIsUpscalingInline] = useState(false);
+
+  // ── Scenario A: MaskEditor Workspace ─────────────────────────────
+  if (activeTask === 'image-edit' && referenceImage) {
     return (
-      <div className="flex flex-col items-center justify-center h-full relative overflow-hidden bg-black/40">
-        <div className="hud-scanline" />
-        <div className="text-center relative z-10 space-y-4">
-          <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
-            <svg
-              className="absolute inset-0 w-full h-full animate-[spin_8s_linear_infinite]"
-              viewBox="0 0 100 100"
-            >
-              <circle
-                cx="50" cy="50" r="45"
-                stroke="#88ce02" strokeWidth="1.5"
-                strokeDasharray="10 30" fill="transparent" strokeLinecap="round"
-              />
-            </svg>
-            <svg
-              className="absolute inset-0 w-full h-full animate-[spin_4s_linear_infinite_reverse]"
-              viewBox="0 0 100 100"
-            >
-              <circle
-                cx="50" cy="50" r="35"
-                stroke="#f5c842" strokeWidth="1"
-                strokeDasharray="40 10" fill="transparent" opacity="0.6"
-              />
-            </svg>
-            <div className="w-6 h-6 rounded-full bg-studio-accent animate-pulse shadow-[0_0_15px_#88ce02]" />
-          </div>
+      <div className="w-full h-full flex flex-col relative bg-neutral-900 overflow-hidden">
+        <MaskEditor />
+      </div>
+    );
+  }
+
+  // ── Scenario B: Generating Loading State ─────────────────────────
+  if (isGenerating || isUpscalingInline) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full w-full bg-studio-surface p-6">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="loading-spinner mb-2" />
           <div className="space-y-1">
-            <h3 className="text-studio-text font-display font-medium text-xs tracking-wider uppercase">
-              Orchestrating Models
+            <h3 className="text-studio-text font-display font-medium text-sm tracking-wide uppercase">
+              {isUpscalingInline ? 'Performing In-Context Detail Upscale' : 'Orchestrating Model pipelines'}
             </h3>
-            <p className="text-studio-muted text-[10px] font-mono">
-              {progress > 0
-                ? `PIPELINE: ${Math.round(progress * 100)}%`
-                : 'DISPATCHING TO NEURAL PIPELINES...'}
+            <p className="text-studio-faded text-xs font-mono">
+              {isUpscalingInline 
+                ? `INCREASING RESOLUTION MULTIPLIER TO ${upscaleFactor}x...`
+                : progress > 0
+                ? `PROCESSING: ${Math.round(progress * 100)}%`
+                : 'DISPATCHING TO NEURAL INFRASTRUCTURE...'}
             </p>
           </div>
         </div>
@@ -85,19 +81,23 @@ export default function ResultCanvas() {
     );
   }
 
+  // ── Scenario C: Empty / Awaiting state ───────────────────────────
   if (!currentResult) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 select-none">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="opacity-20">
-          <circle cx="32" cy="32" r="28" stroke="#88ce02" strokeWidth="1"
-            strokeDasharray="6 6" className="animate-[spin_12s_linear_infinite]" />
-          <circle cx="32" cy="32" r="18" stroke="#8a3ffc" strokeWidth="0.5"
-            strokeDasharray="3 9" className="animate-[spin_8s_linear_infinite_reverse]" />
-          <circle cx="32" cy="32" r="4" fill="#88ce02" opacity="0.6" />
+      <div className="flex flex-col items-center justify-center h-full w-full gap-4 select-none p-6 text-center">
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none" className="text-studio-faded opacity-30">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" />
+          <circle cx="32" cy="32" r="14" stroke="currentColor" strokeWidth="1" />
+          <path d="M32 24v16M24 32h16" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
         </svg>
-        <p className="text-studio-muted text-xs font-mono tracking-wider">
-          // AWAITING GENERATION
-        </p>
+        <div className="space-y-1">
+          <p className="text-studio-muted text-xs font-display font-medium tracking-widest uppercase">
+            Awaiting prompt generation
+          </p>
+          <p className="text-studio-faded text-[11px] font-mono leading-relaxed">
+            Configure keys, select a generation tool above, and press enter to start rendering.
+          </p>
+        </div>
       </div>
     );
   }
@@ -136,22 +136,6 @@ export default function ResultCanvas() {
     setActiveTask('image-edit');
   };
 
-  const handleSendToUpscale = async () => {
-    if (currentResult.blob) {
-      setReferenceImage(currentResult.blob);
-    } else if (currentResult.url && currentResult.type === 'image') {
-      try {
-        const res = await fetch(currentResult.url);
-        const blob = await res.blob();
-        setReferenceImage(blob);
-      } catch {
-        console.error('Could not send result to upscale module');
-        return;
-      }
-    }
-    setActiveTask('upscale');
-  };
-
   const handleSendToVideo = async () => {
     if (currentResult.blob) {
       setReferenceImage(currentResult.blob);
@@ -168,9 +152,32 @@ export default function ResultCanvas() {
     setActiveTask('video-gen');
   };
 
+  // V6 In-Context Quick Upscaling Trigger
+  const handleQuickUpscale = async () => {
+    if (!currentResult) return;
+    setIsUpscalingInline(true);
+    setShowUpscaleOptions(false);
+
+    try {
+      let blob = currentResult.blob;
+      if (!blob && currentResult.url) {
+        const res = await fetch(currentResult.url);
+        blob = await res.blob();
+      }
+      if (blob) {
+        await upscaleImage(blob, upscaleFactor);
+      }
+    } catch (e) {
+      console.error("Inline quick-upscaling failed:", e);
+    } finally {
+      setIsUpscalingInline(false);
+    }
+  };
+
+  // ── Scenario D: Video Output ────────────────────────────────────
   if (isVideo) {
     return (
-      <div className="relative flex items-center justify-center h-full group">
+      <div className="relative flex items-center justify-center h-full w-full p-4 group">
         {currentResult.blob ? (
           <video
             ref={videoRef}
@@ -180,58 +187,62 @@ export default function ResultCanvas() {
             loop
             muted
             playsInline
-            className="max-w-full max-h-full rounded-lg"
+            className="max-w-full max-h-full rounded-lg shadow-sm"
           />
         ) : (
           <div className="flex flex-col items-center gap-4 text-center px-6">
-            <div className="w-16 h-16 rounded-full border border-studio-accent/30 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <polygon points="5,3 19,12 5,21" fill="#88ce02" />
+            <div className="w-14 h-14 rounded-full border border-studio-border-light bg-studio-surface flex items-center justify-center">
+              <svg width="20" height="24" viewBox="0 0 24 24" fill="none">
+                <polygon points="5,3 19,12 5,21" fill="var(--accent-red)" />
               </svg>
             </div>
             <div className="space-y-1">
-              <p className="text-studio-text text-sm font-display">Video Ready</p>
-              <p className="text-studio-muted text-xs font-mono leading-relaxed">
-                Veo 2 videos cannot stream directly in browser.<br />
-                Download to play locally.
+              <p className="text-studio-text text-sm font-display font-medium">Video Render Complete</p>
+              <p className="text-studio-faded text-xs leading-relaxed max-w-xs">
+                Google Veo 2 mp4 streams cannot load inline due to credentials. Download to play.
               </p>
             </div>
             <button
               onClick={handleDownload}
-              className="interactive-btn px-5 py-2 bg-studio-accent text-white text-sm font-display rounded-full shadow-[0_0_20px_rgba(136,206,2,0.3)] hover:shadow-[0_0_30px_rgba(136,206,2,0.5)] transition-all duration-200"
+              className="btn-primary font-display"
             >
               ⬇ Download Video
             </button>
           </div>
         )}
 
-        <div className="absolute bottom-3 left-3 right-3 flex gap-2 justify-center">
-          <button onClick={handleDownload} className="action-pill">
-            ⬇ Download
-          </button>
+        <div className="absolute bottom-4 left-0 right-0 flex gap-2 justify-center px-4 pointer-events-none">
+          <div className="flex gap-2 pointer-events-auto bg-studio-surface/90 backdrop-blur-md p-1.5 rounded-full shadow-md border border-studio-border/30">
+            <button onClick={handleDownload} className="action-pill">
+              ⬇ Download
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ── Scenario E: Image Output with Inline Pop-Over Upscale Modal ──
   return (
-    <div className="relative flex items-center justify-center h-full group">
+    <div className="relative flex items-center justify-center h-full w-full p-4 group bg-studio-surface overflow-hidden">
       {imageUrl && (
         <img
           src={imageUrl}
           alt="Generated result"
-          className="max-w-full max-h-full rounded-lg object-contain"
+          className="max-w-full max-h-full rounded-lg object-contain transition-transform duration-300"
         />
       )}
 
-      <div className="absolute inset-0 flex flex-col items-end justify-between p-3 opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 max-md:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto max-md:pointer-events-auto">
-        <div className="text-right">
-          <span className="text-[10px] font-mono text-white/50 bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm">
-            {currentResult.model} · {currentResult.provider}
-          </span>
-        </div>
+      {/* Details bar */}
+      <div className="absolute top-4 right-4 pointer-events-none">
+        <span className="text-[10px] font-mono text-studio-muted bg-white/90 border border-studio-border px-2.5 py-1 rounded-full shadow-sm">
+          {currentResult.model} · {currentResult.provider}
+        </span>
+      </div>
 
-        <div className="flex gap-2 w-full justify-center flex-wrap">
+      {/* Floating Action Pills overlay */}
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4 pointer-events-none">
+        <div className="flex gap-2 pointer-events-auto bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-md border border-studio-border">
           <button onClick={handleDownload} className="action-pill">
             ⬇ Download
           </button>
@@ -241,11 +252,56 @@ export default function ResultCanvas() {
           <button onClick={handleSendToVideo} className="action-pill">
             ▶ Animate
           </button>
-          <button onClick={handleSendToUpscale} className="action-pill">
+          <button onClick={() => setShowUpscaleOptions(true)} className="action-pill">
             ✦ Upscale
           </button>
         </div>
       </div>
+
+      {/* V6 Pop-over Resolution Picker Overlay */}
+      {showUpscaleOptions && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 shadow-xl border border-studio-border max-w-sm w-full animate-slide-up flex flex-col gap-4 text-studio-text">
+            <div className="space-y-1">
+              <h4 className="font-display text-sm font-semibold uppercase tracking-wider text-studio-text">In-Context Quick Upscaler</h4>
+              <p className="text-studio-muted text-xs">
+                Enhance details and sharpen current results instantly without leaving your current workspace.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 my-2">
+              {[2, 3, 4].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setUpscaleFactor(f)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-mono font-medium transition-colors ${
+                    upscaleFactor === f 
+                      ? 'bg-studio-accent text-white font-semibold shadow-md' 
+                      : 'bg-studio-surface border border-studio-border-light hover:bg-neutral-100 hover:text-studio-text'
+                  }`}
+                >
+                  {f}x
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2 justify-end border-t border-studio-border-light pt-3 shrink-0">
+              <button 
+                onClick={() => setShowUpscaleOptions(false)} 
+                className="btn-outline px-4 py-1.5 rounded-full text-xs font-display"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleQuickUpscale} 
+                className="btn-primary px-4 py-1.5 rounded-full text-xs font-display"
+              >
+                Upscale
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

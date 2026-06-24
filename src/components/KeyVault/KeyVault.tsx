@@ -61,61 +61,73 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="glass-panel rounded-lg w-full max-w-lg p-6 animate-slide-up shadow-[0_0_50px_rgba(0,243,255,0.15)]">
-        <div className="flex items-center justify-between mb-4 border-b border-studio-border pb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-studio-accent animate-pulse shadow-[0_0_8px_#00f3ff]" />
-            <h2 className="text-lg font-display font-bold text-studio-text tracking-wide">
-              {phase === 'unlock' ? 'Unlock Key Vault' : 'API Key Management'}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white border border-studio-border rounded-xl w-full max-w-lg p-6 animate-slide-up shadow-xl">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5 border-b border-studio-border-light pb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-studio-accent animate-pulse shadow-[0_0_8px_rgba(232,64,64,0.3)]" />
+            <h2 className="text-sm font-display font-semibold uppercase tracking-wider text-studio-text">
+              {phase === 'unlock' ? 'Unlock Decryption Key' : 'API Key Management'}
             </h2>
           </div>
-          <button onClick={onClose} className="text-studio-muted hover:text-studio-text text-xl leading-none transition-colors">&times;</button>
+          <button 
+            onClick={onClose} 
+            className="text-studio-faded hover:text-studio-text text-xl leading-none transition-colors"
+          >
+            &times;
+          </button>
         </div>
 
+        {/* Phase 1: Unlock / Passphrase Input */}
         {phase === 'unlock' && (
           <div className="space-y-4">
-            <p className="text-studio-muted text-xs font-mono leading-relaxed">
-              Enter your secret passphrase to decrypt stored API keys. 
-              First time? Enter a new passphrase to initialize your local browser vault.
+            <p className="text-studio-muted text-xs leading-relaxed font-body">
+              Enter your master passphrase to securely decrypt your credentials locally. 
+              If this is your first session, choose a new passphrase to initialize your secure browser vault.
             </p>
             <input
               type="password"
               value={localPassphrase}
               onChange={(e) => setLocalPassphrase(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-              placeholder="Enter passphrase..."
-              className="w-full bg-black/40 border border-studio-border rounded px-3 py-2 text-studio-text font-mono text-sm outline-none focus:border-studio-accent focus:shadow-[0_0_15px_rgba(0,243,255,0.25)] transition-all mb-1"
+              placeholder="Master passphrase..."
+              className="w-full bg-studio-surface border border-studio-border rounded-lg px-3 py-2 text-studio-text font-mono text-sm outline-none focus:border-studio-accent transition-all mb-1"
               autoFocus
             />
             {error && <p className="text-studio-danger text-xs font-mono">{error}</p>}
             <button
               onClick={handleUnlock}
-              className="interactive-btn w-full bg-studio-accent hover:bg-studio-accent-dim text-white rounded-full py-2 font-display font-bold text-sm tracking-wide transition-all shadow-[0_4px_15px_rgba(0,243,255,0.3)]"
+              className="w-full btn-primary rounded-lg py-2.5 text-xs uppercase tracking-wider font-semibold shadow-md"
             >
-              Unlock Vault
+              Unlock Key Vault
             </button>
           </div>
         )}
 
+        {/* Phase 2: Decrypted Keys Management */}
         {phase === 'manage' && (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {error && <p className="text-studio-danger text-sm">{error}</p>}
+          <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+            {error && <p className="text-studio-danger text-xs font-mono">{error}</p>}
             {(Object.keys(PROVIDER_LABELS) as ProviderKey[]).map((provider) => (
-              <div key={provider} className="bg-studio-bg rounded p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-studio-text text-sm font-medium">{PROVIDER_LABELS[provider]}</label>
+              <div key={provider} className="bg-studio-surface border border-studio-border-light rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-studio-text text-xs font-display font-semibold uppercase tracking-wide">
+                    {PROVIDER_LABELS[provider]}
+                  </label>
                   {keys[provider] && (
                     <button
                       onClick={() => handleRemoveKey(provider)}
-                      className="text-studio-danger text-xs hover:underline"
+                      className="text-studio-accent text-xs font-medium hover:underline"
                     >
-                      Remove
+                      Delete
                     </button>
                   )}
                 </div>
+                
                 {keys[provider] ? (
-                  <p className="text-studio-success text-xs font-mono">✓ Key configured</p>
+                  <p className="text-studio-success text-xs font-mono">✓ Decrypted successfully from local storage</p>
                 ) : (
                   <div className="flex gap-2">
                     <input
@@ -123,12 +135,12 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
                       value={newKeys[provider] ?? ''}
                       onChange={(e) => setNewKeys((prev) => ({ ...prev, [provider]: e.target.value }))}
                       onKeyDown={(e) => e.key === 'Enter' && handleSaveKey(provider)}
-                      placeholder={`Paste ${provider} API key...`}
-                      className="flex-1 bg-studio-surface border border-studio-border rounded px-2 py-1.5 text-studio-text font-mono text-xs outline-none focus:border-studio-accent"
+                      placeholder={`Paste ${provider} API key here...`}
+                      className="flex-1 bg-white border border-studio-border rounded-lg px-3 py-1.5 text-studio-text font-mono text-xs outline-none focus:border-studio-accent"
                     />
                     <button
                       onClick={() => handleSaveKey(provider)}
-                      className="bg-studio-accent hover:bg-studio-accent-dim text-black px-3 rounded text-xs font-medium transition-colors"
+                      className="btn-primary px-4 py-1.5 rounded-lg text-xs font-medium"
                     >
                       Save
                     </button>
@@ -136,9 +148,8 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
                 )}
               </div>
             ))}
-            <p className="text-studio-muted text-xs mt-2">
-              Keys are encrypted with AES-256-GCM and stored in your browser's localStorage.
-              They are never sent to any server.
+            <p className="text-studio-faded text-[10px] leading-relaxed mt-4 font-mono">
+              * Keys are encrypted locally using AES-256-GCM prior to storage. Credentials never contact external servers or middleware trackers.
             </p>
           </div>
         )}

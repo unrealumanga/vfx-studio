@@ -23,58 +23,32 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isExpanding, setIsExpanding] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [selectedIdx, setSelectedIdx] = useState(-1);
   const [ghostText, setGhostText] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
 
+  // Semantic/In-memory autocomplete matching
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (prompt.length > 5) {
+      if (prompt.trim().length > 3) {
         const results = await searchPrompts(prompt);
         if (results.length > 0) {
-          setSuggestions(results);
-          setSelectedIdx(0);
-          setShowDropdown(true);
+          // Find first suggestion starting with current typed string (case insensitive)
           const match = results.find(r => r.toLowerCase().startsWith(prompt.toLowerCase()));
-          if (match) {
+          if (match && match.toLowerCase() !== prompt.toLowerCase()) {
             setGhostText(match.slice(prompt.length));
           } else {
             setGhostText('');
           }
         } else {
-          setSuggestions([]);
-          setShowDropdown(false);
           setGhostText('');
         }
       } else {
-        setSuggestions([]);
-        setShowDropdown(false);
         setGhostText('');
       }
     };
 
-    const timer = setTimeout(fetchSuggestions, 300);
+    const timer = setTimeout(fetchSuggestions, 200);
     return () => clearTimeout(timer);
   }, [prompt, searchPrompts]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const acceptSuggestion = (text: string) => {
-    setPrompt(text);
-    setSuggestions([]);
-    setShowDropdown(false);
-    setGhostText('');
-    textareaRef.current?.focus();
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -84,13 +58,12 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
     }
 
     if (e.key === 'Tab') {
-      e.preventDefault();
       if (ghostText) {
+        e.preventDefault();
         const newPrompt = prompt + ghostText;
         setPrompt(newPrompt);
         setGhostText('');
-        setSuggestions([]);
-        setShowDropdown(false);
+        // Restore focus selection at the end
         requestAnimationFrame(() => {
           if (textareaRef.current) {
             textareaRef.current.selectionStart = newPrompt.length;
@@ -98,34 +71,12 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
             textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
           }
         });
-      } else if (suggestions.length > 0 && selectedIdx >= 0) {
-        acceptSuggestion(suggestions[selectedIdx]);
       }
-      return;
-    }
-
-    if (e.key === 'ArrowDown') {
-      if (suggestions.length > 0) {
-        e.preventDefault();
-        setSelectedIdx(i => (i < suggestions.length - 1 ? i + 1 : i));
-      }
-    }
-
-    if (e.key === 'ArrowUp') {
-      if (suggestions.length > 0) {
-        e.preventDefault();
-        setSelectedIdx(i => (i > 0 ? i - 1 : i));
-      }
-    }
-
-    if (e.key === 'Escape') {
-      setShowDropdown(false);
     }
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
-    setShowDropdown(false);
     onGenerate();
   };
 
@@ -149,21 +100,20 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
   };
 
   return (
-    <div ref={containerRef} className="relative z-30">
-      <div
-        className={`relative flex items-end gap-2 glass-panel rounded-lg p-3 transition-all duration-300 ${
-          isGenerating ? 'glow-pulse-active scale-[1.005]' : ''
-        }`}
-      >
-        <div className="relative flex-1 min-w-0">
+    <div ref={containerRef} className="w-full flex flex-col gap-2">
+      <div className="relative flex items-end gap-3 bg-studio-bg border border-studio-border rounded-xl p-4 transition-shadow focus-within:border-studio-accent focus-within:shadow-[0_4px_20px_rgba(232,64,64,0.06)]">
+        
+        {/* Core Input Layer with overlapping ghost autocomplete */}
+        <div className="relative flex-1 min-w-0 min-h-[44px]">
+          {/* Overlay matching div containing transparent typed text + ghost suffix */}
           {ghostText && (
             <div
               aria-hidden="true"
-              className={`absolute inset-0 px-0 py-0 pointer-events-none select-none z-20 overflow-hidden ${TEXT_STYLE}`}
+              className={`absolute inset-0 px-0 py-0 pointer-events-none select-none z-0 overflow-hidden ${TEXT_STYLE}`}
               style={{ color: 'transparent' }}
             >
               <span style={{ color: 'transparent' }}>{prompt}</span>
-              <span className="text-studio-muted/35">{ghostText}</span>
+              <span className="text-studio-faded/35">{ghostText}</span>
             </div>
           )}
 
@@ -177,65 +127,41 @@ export default function PromptBar({ onGenerate }: PromptBarProps) {
             onKeyDown={handleKeyDown}
             placeholder=""
             rows={2}
-            className={`w-full bg-transparent text-studio-text placeholder-studio-muted/40 resize-none outline-none leading-relaxed relative z-10 ${TEXT_STYLE}`}
+            className={`w-full bg-transparent text-studio-text placeholder-studio-faded/40 resize-none outline-none leading-relaxed relative z-10 ${TEXT_STYLE}`}
+            style={{ caretColor: 'var(--accent-red)' }}
           />
 
+          {/* Minimal blink cursor prompt placeholder */}
           {!prompt && (
-            <span className="absolute top-0 left-0 pointer-events-none text-studio-muted/50 font-mono text-sm term-cursor select-none">
-              Describe what you want to create
+            <span className="absolute top-0 left-0 pointer-events-none text-studio-faded/50 font-mono text-sm term-cursor select-none">
+              Describe what you want to create... <span className="text-studio-accent text-xs animate-pulse opacity-70">(Tab to complete suggestions)</span>
             </span>
           )}
         </div>
 
+        {/* Action button grouping */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleExpandPrompt}
             disabled={isExpanding || !prompt.trim()}
-            className="interactive-btn text-studio-muted hover:text-studio-accent transition-colors text-sm font-medium disabled:opacity-40 px-2 py-1.5 rounded hover:bg-studio-border"
+            className="btn-outline px-4 py-2 rounded-full text-xs font-display font-medium uppercase tracking-wider disabled:opacity-40 interactive-btn"
             title="Expand prompt with AI assistance"
           >
-            {isExpanding ? '...' : '✦'}
+            {isExpanding ? 'Expanding...' : '✦ Expand'}
           </button>
+          
           <button
             onClick={handleGenerate}
             disabled={!prompt.trim() || isGenerating}
-            className="interactive-btn bg-studio-accent hover:bg-studio-accent-dim disabled:opacity-40 disabled:cursor-not-allowed text-black font-display font-medium px-5 py-2 rounded-full text-sm transition-all"
+            className="btn-primary px-6 py-2 rounded-full text-xs font-display font-medium uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed interactive-btn"
           >
             {isGenerating ? 'Generating...' : 'Generate'}
           </button>
         </div>
       </div>
 
-      {showDropdown && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 w-full mt-2 glass-panel rounded-lg shadow-xl z-50 overflow-hidden text-sm font-mono border border-studio-border/50">
-          <div className="p-2 text-[10px] text-studio-muted uppercase tracking-wider border-b border-studio-border/30 bg-black/20 flex justify-between">
-            <span>// AUTOCOMPLETE</span>
-            <span>[Tab] to accept</span>
-          </div>
-          <div className="max-h-60 overflow-y-auto">
-            {suggestions.map((sug, i) => (
-              <div
-                key={i}
-                className={`p-3 cursor-pointer border-b border-studio-border/10 last:border-0 transition-colors ${
-                  i === selectedIdx
-                    ? 'bg-studio-accent/20 text-studio-text'
-                    : 'text-studio-muted hover:bg-white/5 hover:text-studio-text'
-                }`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  acceptSuggestion(sug);
-                }}
-                onMouseEnter={() => setSelectedIdx(i)}
-              >
-                {sug}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {error && (
-        <p className="text-studio-danger text-sm mt-2 font-mono">{error}</p>
+        <p className="text-studio-accent text-xs font-mono mt-1 px-1">✕ Error: {error}</p>
       )}
     </div>
   );
