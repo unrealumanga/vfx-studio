@@ -1,11 +1,10 @@
 import { useRef } from 'react';
 import { useSessionStore } from '../../store/session.store';
-import ModelBadge from '../../components/ModelBadge/ModelBadge';
-import { pickAdapter } from '../../utils/router';
 import { useKeysStore } from '../../store/keys.store';
+import { pickAdapter } from '../../utils/router';
 
 export default function ImageEdit() {
-  const { referenceImage, setReferenceImage, setMaskImage, overrideProvider, googleModel, setGoogleModel } = useSessionStore();
+  const { referenceImage, setReferenceImage, setMaskImage, overrideProvider, imageEditMode, setImageEditMode } = useSessionStore();
   const keys = useKeysStore((s) => s.keys);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -21,100 +20,92 @@ export default function ImageEdit() {
     const file = e.target.files?.[0];
     if (file) {
       setReferenceImage(file);
-      setMaskImage(null); // Reset any existing mask on new uploads
+      setMaskImage(null);
     }
   };
 
   return (
-    <div className="space-y-4 font-body">
+    <div className="space-y-5">
       
-      {/* Dynamic Model Badge */}
-      <div className="flex items-center gap-2">
-        <ModelBadge currentProvider={resolved} />
-      </div>
-
-      {/* Model Selection Dropdown */}
-      {resolved === 'google' && (
-        <div className="space-y-1">
-          <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Google Model</label>
-          <select
-            value={googleModel}
-            onChange={(e) => setGoogleModel(e.target.value)}
-            className="w-full bg-white border border-studio-border rounded-lg px-3 py-2 text-studio-text text-xs outline-none focus:border-studio-accent"
-          >
-            <option value="nano-banana">Nano Banana (fast)</option>
-            <option value="nano-banana-2">Nano Banana 2 (default)</option>
-            <option value="nano-banana-pro">Nano Banana Pro (studio quality)</option>
-          </select>
+      {resolved && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className="aw-pill py-1 px-3 text-[10px]">{resolved} Active</span>
         </div>
       )}
 
-      {/* Upload Reference Image Slot */}
-      <div className="space-y-2">
-        <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Reference Image</label>
-        <input 
-          ref={fileRef} 
-          type="file" 
-          accept="image/*" 
-          onChange={handleImageUpload} 
-          className="hidden" 
-        />
-        
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="w-full text-xs py-2 px-3 border border-studio-border rounded-lg text-studio-muted hover:text-studio-text hover:border-neutral-500 bg-white transition-all text-left flex items-center justify-between"
-        >
-          <span>{referenceImage ? '✓ Image uploaded' : 'Select file...'}</span>
-          <span className="text-[10px] uppercase font-mono text-studio-faded">Upload</span>
-        </button>
+      <div>
+        <label className="label block mb-3">Edit Mode</label>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setImageEditMode('inpaint')}
+            className={`aw-btn-outline flex-1 py-2 rounded-lg text-xs font-medium ${imageEditMode === 'inpaint' ? 'active bg-studio-accent text-white border-studio-accent' : ''}`}
+          >
+            Inpaint
+          </button>
+          <button
+            onClick={() => setImageEditMode('outpaint')}
+            className={`aw-btn-outline flex-1 py-2 rounded-lg text-xs font-medium ${imageEditMode === 'outpaint' ? 'active bg-studio-accent text-white border-studio-accent' : ''}`}
+          >
+            Outpaint
+          </button>
+          <button
+            onClick={() => setImageEditMode('replace')}
+            className={`aw-btn-outline flex-1 py-2 rounded-lg text-xs font-medium ${imageEditMode === 'replace' ? 'active bg-studio-accent text-white border-studio-accent' : ''}`}
+          >
+            Replace
+          </button>
+        </div>
       </div>
 
-      {/* Help info when image is loaded */}
+      <div>
+        <label className="label block mb-3">Reference Image</label>
+        <div className="relative">
+          <input 
+            ref={fileRef} 
+            type="file" 
+            accept="image/*" 
+            onChange={handleImageUpload} 
+            className="hidden" 
+            id="editImageUpload"
+          />
+          
+          <label 
+            htmlFor="editImageUpload" 
+            className="aw-btn-outline w-full py-4 rounded-xl flex flex-col items-center justify-center gap-2 border-dashed cursor-pointer hover:border-studio-text transition-colors"
+          >
+            <svg className="w-5 h-5 text-studio-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span className="text-xs text-studio-muted">{referenceImage ? '✓ Image Loaded (Click to change)' : 'Drop image or click to upload'}</span>
+          </label>
+        </div>
+      </div>
+
       {referenceImage && (
-        <div className="p-3 bg-studio-surface border border-studio-border-light rounded-lg space-y-1.5 animate-slide-up">
-          <p className="text-[10px] font-mono text-studio-accent uppercase tracking-wider font-semibold">Workspace Active</p>
-          <p className="text-studio-muted text-[11px] leading-relaxed">
-            Strokes drawn directly on the main panel over your image define the mask.
-          </p>
+        <div>
           <button
             onClick={() => {
               setReferenceImage(null);
               setMaskImage(null);
             }}
-            className="w-full text-[10px] text-studio-danger bg-white border border-studio-border hover:border-studio-danger rounded py-1 font-mono transition-colors uppercase tracking-wider mt-1"
+            className="aw-btn-outline w-full py-2 rounded-xl text-xs font-medium text-studio-danger border-studio-danger hover:bg-studio-danger/10"
           >
             Clear reference & mask
           </button>
         </div>
       )}
-
-      {/* Auxiliary actions */}
-      <div className="pt-2 border-t border-studio-border-light space-y-2">
-        <button
-          onClick={async () => {
-            const session = useSessionStore.getState();
-            const result = session.currentResult;
-            if (result) {
-              if (result.blob) {
-                setReferenceImage(result.blob);
-                setMaskImage(null);
-              } else if (result.url) {
-                try {
-                  const res = await fetch(result.url);
-                  const blob = await res.blob();
-                  setReferenceImage(blob);
-                  setMaskImage(null);
-                } catch (e) {
-                  console.error("Failed to load result image as reference:", e);
-                }
-              }
-            }
-          }}
-          className="w-full text-xs text-studio-muted hover:text-studio-accent hover:border-studio-accent bg-white border border-studio-border rounded-lg py-2 font-mono transition-colors interactive-btn uppercase tracking-wider text-center"
-        >
-          ↻ Use current result
-        </button>
+      
+      <div>
+        <label className="label block mb-3">Strength</label>
+        <input type="range" min="0" max="100" defaultValue="70" className="w-full mb-1" />
+        <div className="flex justify-between text-xs text-studio-faded font-mono">
+            <span>Subtle</span>
+            <span>Strong</span>
+        </div>
       </div>
+
     </div>
   );
 }

@@ -1,13 +1,11 @@
 import { useSessionStore } from '../../store/session.store';
-import ModelBadge from '../../components/ModelBadge/ModelBadge';
-import { pickAdapter } from '../../utils/router';
 import { useKeysStore } from '../../store/keys.store';
-import { generateVideo } from './videoGen.service';
+import { pickAdapter } from '../../utils/router';
 
-// Video model options per provider
 const VIDEO_MODELS: Record<string, { label: string; modelId: string }[]> = {
   google: [
     { label: 'Veo 2', modelId: 'veo-2.0-generate-001' },
+    { label: 'Veo 3', modelId: 'veo-3.0-generate' },
   ],
   runway: [
     { label: 'Gen-2', modelId: 'gen-2' },
@@ -15,6 +13,7 @@ const VIDEO_MODELS: Record<string, { label: string; modelId: string }[]> = {
   ],
   fal: [
     { label: 'Luma Dream Machine', modelId: 'luma-dream-machine' },
+    { label: 'Kling 1.6', modelId: 'kling-1.6' },
   ],
 };
 
@@ -24,7 +23,10 @@ export default function VideoGen() {
     setOverrideProvider,
     videoModel,
     setVideoModel,
-    referenceImage,
+    _videoDuration,
+    setVideoDuration,
+    aspectRatio,
+    setAspectRatio
   } = useSessionStore();
   const keys = useKeysStore((s) => s.keys);
 
@@ -38,40 +40,47 @@ export default function VideoGen() {
 
   const handleProviderChange = (provider: string) => {
     setOverrideProvider(provider);
-    // Set default model for that provider
     const models = VIDEO_MODELS[provider];
     if (models && models.length > 0) {
       setVideoModel(models[0].modelId);
     }
   };
 
-  return (
-    <div className="space-y-4 font-body text-studio-text dark:text-white">
-      <ModelBadge currentProvider={resolved} />
+  const activeProv = overrideProvider || resolved || 'google';
 
-      <div className="space-y-2">
-        <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Provider</label>
-        <select
-          value={overrideProvider || ''}
-          onChange={(e) => handleProviderChange(e.target.value)}
-          className="w-full bg-white dark:bg-neutral-800 border border-studio-border dark:border-neutral-700 rounded-lg px-3 py-2 text-studio-text dark:text-white text-xs outline-none focus:border-studio-accent"
-        >
-          <option value="">Auto (priority order)</option>
-          <option value="google">Google (Veo 2)</option>
-          <option value="runway">RunwayML</option>
-          <option value="fal">Fal.ai</option>
-        </select>
+  return (
+    <div className="space-y-5">
+      
+      {resolved && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className="aw-pill py-1 px-3 text-[10px]">{resolved} Active</span>
+        </div>
+      )}
+
+      <div>
+        <label className="label block mb-3">Provider</label>
+        <div className="flex gap-2">
+          {['google', 'runway', 'fal'].map(p => (
+              <button
+                key={p}
+                onClick={() => handleProviderChange(p)}
+                className={`aw-btn-outline flex-1 py-2 rounded-lg text-xs font-medium capitalize ${activeProv === p ? 'active bg-studio-accent text-white border-studio-accent' : ''}`}
+              >
+                {p}
+              </button>
+          ))}
+        </div>
       </div>
 
-      {overrideProvider && VIDEO_MODELS[overrideProvider] && (
-        <div className="space-y-2">
-          <label className="text-studio-muted text-xs font-display font-medium uppercase tracking-wide block">Model</label>
+      {VIDEO_MODELS[activeProv] && (
+        <div>
+          <label className="label block mb-3">Model</label>
           <select
             value={videoModel}
             onChange={(e) => setVideoModel(e.target.value)}
-            className="w-full bg-white dark:bg-neutral-800 border border-studio-border dark:border-neutral-700 rounded-lg px-3 py-2 text-studio-text dark:text-white text-xs outline-none focus:border-studio-accent"
+            className="aw-input w-full px-4 py-3 rounded-xl text-sm appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e')] bg-no-repeat bg-[right_1rem_center] bg-[length:1rem]"
           >
-            {VIDEO_MODELS[overrideProvider].map((m) => (
+            {VIDEO_MODELS[activeProv].map((m) => (
               <option key={m.modelId} value={m.modelId}>
                 {m.label}
               </option>
@@ -80,20 +89,40 @@ export default function VideoGen() {
         </div>
       )}
 
-      <div className="space-y-2 pt-2 border-t border-studio-border-light dark:border-neutral-700">
-        <button
-          onClick={() => generateVideo()}
-          disabled={!referenceImage}
-          className="w-full btn-primary py-2.5 rounded-full text-xs uppercase tracking-wider font-semibold shadow-md interactive-btn disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Generate Video
-        </button>
-        {!referenceImage && (
-          <p className="text-studio-faded text-[10px] font-mono text-center">
-            Please upload a reference image in the main canvas first.
-          </p>
-        )}
+      <div>
+          <label className="label block mb-3">Duration</label>
+          <div className="flex gap-2">
+              {[4, 5, 8, 10].map(d => (
+                  <button
+                      key={d}
+                      onClick={() => setVideoDuration(d)}
+                      className={`aw-btn-outline flex-1 py-2 rounded-lg text-xs font-medium ${
+                          _videoDuration === d ? 'active bg-studio-accent text-white border-studio-accent' : ''
+                      }`}
+                  >
+                      {d}s
+                  </button>
+              ))}
+          </div>
       </div>
+
+      <div>
+          <label className="label block mb-3">Aspect Ratio</label>
+          <div className="grid grid-cols-3 gap-2">
+              {['16:9', '9:16', '1:1'].map(ar => (
+                  <button
+                      key={ar}
+                      onClick={() => setAspectRatio(ar)}
+                      className={`aw-btn-outline py-2 rounded-lg text-xs font-medium ${
+                          aspectRatio === ar ? 'active bg-studio-accent text-white border-studio-accent' : ''
+                      }`}
+                  >
+                      {ar}
+                  </button>
+              ))}
+          </div>
+      </div>
+
     </div>
   );
 }

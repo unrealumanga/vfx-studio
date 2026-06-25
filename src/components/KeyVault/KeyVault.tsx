@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useKeysStore, type ProviderKey } from '../../store/keys.store';
 
 const PROVIDER_LABELS: Record<ProviderKey, string> = {
-  google: 'Google AI Studio (Gemini, Veo 2)',
-  openai: 'OpenAI (DALL·E 3, GPT-4o)',
+  google: 'Google (Gemini / Video)',
+  openai: 'OpenAI / DALL-E',
   anthropic: 'Anthropic (Claude)',
-  replicate: 'Replicate (Flux, ESRGAN)',
+  replicate: 'Replicate',
   fal: 'Fal.ai',
-  runway: 'RunwayML',
+  runway: 'Runway ML',
 };
 
 interface KeyVaultProps {
@@ -61,96 +61,78 @@ export default function KeyVault({ open, onClose }: KeyVaultProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white border border-studio-border rounded-xl w-full max-w-lg p-6 animate-slide-up shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center font-body">
+      <div className="modal-overlay absolute inset-0" onClick={onClose}></div>
+      <div className="absolute inset-x-4 top-[10%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[480px] bg-studio-bg border border-studio-border-light rounded-2xl shadow-2xl p-6 md:p-8 animate-fade-in max-h-[80vh] overflow-y-auto z-10">
         
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5 border-b border-studio-border-light pb-4">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-studio-accent animate-pulse shadow-[0_0_8px_rgba(232,64,64,0.3)]" />
-            <h2 className="text-sm font-display font-semibold uppercase tracking-wider text-studio-text">
-              {phase === 'unlock' ? 'Unlock Decryption Key' : 'API Key Management'}
-            </h2>
-          </div>
-          <button 
-            onClick={onClose} 
-            className="text-studio-faded hover:text-studio-text text-xl leading-none transition-colors"
-          >
-            &times;
-          </button>
+        <div className="flex items-center justify-between mb-8">
+            <div>
+                <h2 className="font-display font-semibold text-xl tracking-tight">Key Vault</h2>
+                <p className="text-studio-muted text-sm mt-1">Securely stored in your browser</p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-studio-elevated rounded-full transition-colors">
+                <svg className="w-5 h-5 text-studio-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
         </div>
 
-        {/* Phase 1: Unlock / Passphrase Input */}
         {phase === 'unlock' && (
-          <div className="space-y-4">
-            <p className="text-studio-muted text-xs leading-relaxed font-body">
-              Enter your master passphrase to securely decrypt your credentials locally. 
-              If this is your first session, choose a new passphrase to initialize your secure browser vault.
-            </p>
-            <input
-              type="password"
-              value={localPassphrase}
-              onChange={(e) => setLocalPassphrase(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-              placeholder="Master passphrase..."
-              className="w-full bg-studio-surface border border-studio-border rounded-lg px-3 py-2 text-studio-text font-mono text-sm outline-none focus:border-studio-accent transition-all mb-1"
-              autoFocus
-            />
-            {error && <p className="text-studio-danger text-xs font-mono">{error}</p>}
-            <button
-              onClick={handleUnlock}
-              className="w-full btn-primary rounded-lg py-2.5 text-xs uppercase tracking-wider font-semibold shadow-md"
-            >
-              Unlock Key Vault
-            </button>
+          <div className="space-y-5">
+            <div>
+                <label className="label block mb-2">Master Passphrase</label>
+                <input
+                    type="password"
+                    value={localPassphrase}
+                    onChange={(e) => setLocalPassphrase(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+                    placeholder="Enter to encrypt/decrypt keys"
+                    className="aw-input w-full px-4 py-3 rounded-xl"
+                    autoFocus
+                />
+            </div>
+            {error && <p className="text-studio-danger text-xs font-mono px-1">{error}</p>}
+            <div className="mt-8">
+                <button onClick={handleUnlock} className="aw-btn w-full py-3 rounded-xl text-sm font-medium">Unlock Vault</button>
+            </div>
           </div>
         )}
 
-        {/* Phase 2: Decrypted Keys Management */}
         {phase === 'manage' && (
-          <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+          <div className="space-y-5">
             {error && <p className="text-studio-danger text-xs font-mono">{error}</p>}
-            {(Object.keys(PROVIDER_LABELS) as ProviderKey[]).map((provider) => (
-              <div key={provider} className="bg-studio-surface border border-studio-border-light rounded-lg p-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-studio-text text-xs font-display font-semibold uppercase tracking-wide">
-                    {PROVIDER_LABELS[provider]}
-                  </label>
-                  {keys[provider] && (
-                    <button
-                      onClick={() => handleRemoveKey(provider)}
-                      className="text-studio-accent text-xs font-medium hover:underline"
-                    >
-                      Delete
-                    </button>
-                  )}
+            
+            <div className="space-y-4">
+              {(Object.keys(PROVIDER_LABELS) as ProviderKey[]).map((provider) => (
+                <div key={provider}>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="label block">{PROVIDER_LABELS[provider]}</label>
+                        {keys[provider] && (
+                            <button onClick={() => handleRemoveKey(provider)} className="text-[10px] text-studio-danger hover:underline uppercase tracking-wider font-mono">Remove</button>
+                        )}
+                    </div>
+                    {keys[provider] ? (
+                        <div className="aw-input w-full px-4 py-3 rounded-xl flex items-center justify-between bg-studio-surface opacity-70">
+                            <span className="text-sm font-mono text-studio-muted">••••••••••••••••</span>
+                            <span className="text-studio-success text-xs font-medium">Saved</span>
+                        </div>
+                    ) : (
+                        <div className="flex gap-2">
+                            <input
+                                type="password"
+                                value={newKeys[provider] ?? ''}
+                                onChange={(e) => setNewKeys((prev) => ({ ...prev, [provider]: e.target.value }))}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSaveKey(provider)}
+                                placeholder="Paste API key..."
+                                className="key-input aw-input flex-1 px-4 py-3 rounded-xl"
+                            />
+                            <button onClick={() => handleSaveKey(provider)} className="aw-btn px-4 rounded-xl text-sm">Save</button>
+                        </div>
+                    )}
                 </div>
-                
-                {keys[provider] ? (
-                  <p className="text-studio-success text-xs font-mono">✓ Decrypted successfully from local storage</p>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="password"
-                      value={newKeys[provider] ?? ''}
-                      onChange={(e) => setNewKeys((prev) => ({ ...prev, [provider]: e.target.value }))}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSaveKey(provider)}
-                      placeholder={`Paste ${provider} API key here...`}
-                      className="flex-1 bg-white border border-studio-border rounded-lg px-3 py-1.5 text-studio-text font-mono text-xs outline-none focus:border-studio-accent"
-                    />
-                    <button
-                      onClick={() => handleSaveKey(provider)}
-                      className="btn-primary px-4 py-1.5 rounded-lg text-xs font-medium"
-                    >
-                      Save
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-            <p className="text-studio-faded text-[10px] leading-relaxed mt-4 font-mono">
-              * Keys are encrypted locally using AES-256-GCM prior to storage. Credentials never contact external servers or middleware trackers.
-            </p>
+              ))}
+            </div>
+
           </div>
         )}
       </div>

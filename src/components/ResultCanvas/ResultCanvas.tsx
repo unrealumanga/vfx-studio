@@ -4,7 +4,6 @@ import { blobToUrl } from '../../utils/blobUtils';
 import MaskEditor from '../MaskEditor/MaskEditor';
 import { upscaleImage } from '../../modules/upscale/upscale.service';
 
-// Helper to trigger client-side file downloads
 async function downloadResult(
   blob: Blob | undefined,
   url: string | undefined,
@@ -40,64 +39,44 @@ function triggerDownload(href: string, filename: string) {
 }
 
 export default function ResultCanvas() {
-  const { activeTask, currentResult, isGenerating, progress, referenceImage, setReferenceImage, setActiveTask } =
+  const { activeTask, currentResult, isGenerating, referenceImage, setReferenceImage, setActiveTask } =
     useSessionStore();
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // V6 In-Context Quick-Upscale states
   const [showUpscaleOptions, setShowUpscaleOptions] = useState(false);
   const [upscaleFactor, setUpscaleFactor] = useState(2);
   const [isUpscalingInline, setIsUpscalingInline] = useState(false);
 
-  // ── Scenario A: MaskEditor Workspace ─────────────────────────────
   if (activeTask === 'image-edit' && referenceImage) {
     return (
-      <div className="w-full h-full flex flex-col relative bg-neutral-900 overflow-hidden">
+      <div className="w-full h-full flex flex-col relative bg-studio-bg overflow-hidden">
         <MaskEditor />
       </div>
     );
   }
 
-  // ── Scenario B: Generating Loading State ─────────────────────────
   if (isGenerating || isUpscalingInline) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full bg-studio-surface p-6">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="loading-spinner mb-2" />
-          <div className="space-y-1">
-            <h3 className="text-studio-text font-display font-medium text-sm tracking-wide uppercase">
-              {isUpscalingInline ? 'Performing In-Context Detail Upscale' : 'Orchestrating Model pipelines'}
-            </h3>
-            <p className="text-studio-faded text-xs font-mono">
-              {isUpscalingInline 
-                ? `INCREASING RESOLUTION MULTIPLIER TO ${upscaleFactor}x...`
-                : progress > 0
-                ? `PROCESSING: ${Math.round(progress * 100)}%`
-                : 'DISPATCHING TO NEURAL INFRASTRUCTURE...'}
-            </p>
-          </div>
-        </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-studio-bg/60 backdrop-blur-sm z-20">
+          <div className="spinner mb-4"></div>
+          <p className="label animate-pulse">{isUpscalingInline ? 'Upscaling' : 'Rendering'}</p>
       </div>
     );
   }
 
-  // ── Scenario C: Empty / Awaiting state ───────────────────────────
   if (!currentResult) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full gap-4 select-none p-6 text-center">
-        <svg width="48" height="48" viewBox="0 0 64 64" fill="none" className="text-studio-faded opacity-30">
-          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" />
-          <circle cx="32" cy="32" r="14" stroke="currentColor" strokeWidth="1" />
-          <path d="M32 24v16M24 32h16" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-        </svg>
-        <div className="space-y-1">
-          <p className="text-studio-muted text-xs font-display font-medium tracking-widest uppercase">
-            Awaiting prompt generation
+      <div id="emptyState" className="text-center p-8 animate-fade-in">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-studio-elevated border border-studio-border-light flex items-center justify-center">
+              <svg className="w-6 h-6 text-studio-muted" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+              </svg>
+          </div>
+          <p className="text-studio-muted text-sm max-w-xs mx-auto leading-relaxed">
+              Describe what you want to create.<br/>Your result will appear here.
           </p>
-          <p className="text-studio-faded text-[11px] font-mono leading-relaxed">
-            Configure keys, select a generation tool above, and press enter to start rendering.
-          </p>
-        </div>
       </div>
     );
   }
@@ -152,7 +131,6 @@ export default function ResultCanvas() {
     setActiveTask('video-gen');
   };
 
-  // V6 In-Context Quick Upscaling Trigger
   const handleQuickUpscale = async () => {
     if (!currentResult) return;
     setIsUpscalingInline(true);
@@ -174,10 +152,9 @@ export default function ResultCanvas() {
     }
   };
 
-  // ── Scenario D: Video Output ────────────────────────────────────
   if (isVideo) {
     return (
-      <div className="relative flex items-center justify-center h-full w-full p-4 group">
+      <div id="resultVideoContainer" className="w-full h-full p-4 flex items-center justify-center group relative">
         {currentResult.blob ? (
           <video
             ref={videoRef}
@@ -187,119 +164,72 @@ export default function ResultCanvas() {
             loop
             muted
             playsInline
-            className="max-w-full max-h-full rounded-lg shadow-sm"
+            className="max-w-full max-h-[70vh] rounded-lg shadow-sm border border-studio-border-light"
           />
         ) : (
-          <div className="flex flex-col items-center gap-4 text-center px-6">
-            <div className="w-14 h-14 rounded-full border border-studio-border-light bg-studio-surface flex items-center justify-center">
-              <svg width="20" height="24" viewBox="0 0 24 24" fill="none">
-                <polygon points="5,3 19,12 5,21" fill="var(--accent-red)" />
-              </svg>
-            </div>
-            <div className="space-y-1">
-              <p className="text-studio-text text-sm font-display font-medium">Video Render Complete</p>
-              <p className="text-studio-faded text-xs leading-relaxed max-w-xs">
-                Google Veo 2 mp4 streams cannot load inline due to credentials. Download to play.
-              </p>
-            </div>
-            <button
-              onClick={handleDownload}
-              className="btn-primary font-display"
-            >
-              ⬇ Download Video
-            </button>
+          <div className="text-center">
+            <p className="text-studio-muted mb-4">Video generated. Please download to view.</p>
+            <button onClick={handleDownload} className="aw-btn px-6 py-2 rounded-xl">⬇ Download Video</button>
           </div>
         )}
-
-        <div className="absolute bottom-4 left-0 right-0 flex gap-2 justify-center px-4 pointer-events-none">
-          <div className="flex gap-2 pointer-events-auto bg-studio-surface/90 backdrop-blur-md p-1.5 rounded-full shadow-md border border-studio-border/30">
-            <button onClick={handleDownload} className="action-pill">
-              ⬇ Download
-            </button>
-          </div>
+        
+        {/* Action pills hover */}
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="flex gap-2 pointer-events-auto bg-studio-bg/90 backdrop-blur-md p-1.5 rounded-full shadow-md border border-studio-border">
+                <button onClick={handleDownload} className="aw-pill text-xs py-1.5 px-3">⬇ Save</button>
+            </div>
         </div>
       </div>
     );
   }
 
-  // ── Scenario E: Image Output with Inline Pop-Over Upscale Modal ──
   return (
-    <div className="relative flex items-center justify-center h-full w-full p-4 group bg-studio-surface overflow-hidden">
+    <div id="resultContainer" className="w-full h-full p-4 flex items-center justify-center animate-fade-in relative group">
       {imageUrl && (
-        <img
-          src={imageUrl}
-          alt="Generated result"
-          className="max-w-full max-h-full rounded-lg object-contain transition-transform duration-300"
-        />
+        <div className="img-reveal rounded-lg overflow-hidden max-w-full max-h-full shadow-sm border border-studio-border-light">
+          <img
+            id="resultImage"
+            src={imageUrl}
+            alt="Result"
+            className="max-w-full max-h-[70vh] object-contain block"
+          />
+        </div>
       )}
 
-      {/* Details bar */}
-      <div className="absolute top-4 right-4 pointer-events-none">
-        <span className="text-[10px] font-mono text-studio-muted bg-white/90 border border-studio-border px-2.5 py-1 rounded-full shadow-sm">
-          {currentResult.model} · {currentResult.provider}
-        </span>
-      </div>
-
       {/* Floating Action Pills overlay */}
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4 pointer-events-none">
-        <div className="flex gap-2 pointer-events-auto bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-md border border-studio-border">
-          <button onClick={handleDownload} className="action-pill">
-            ⬇ Download
-          </button>
-          <button onClick={handleUseAsReference} className="action-pill">
-            ✂ Edit
-          </button>
-          <button onClick={handleSendToVideo} className="action-pill">
-            ▶ Animate
-          </button>
-          <button onClick={() => setShowUpscaleOptions(true)} className="action-pill">
-            ✦ Upscale
-          </button>
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className="flex gap-2 pointer-events-auto bg-studio-bg/90 backdrop-blur-md p-1.5 rounded-full shadow-md border border-studio-border">
+          <button onClick={handleDownload} className="aw-pill text-xs py-1.5 px-3">⬇ Save</button>
+          <button onClick={handleUseAsReference} className="aw-pill text-xs py-1.5 px-3">✂ Edit</button>
+          <button onClick={handleSendToVideo} className="aw-pill text-xs py-1.5 px-3">▶ Animate</button>
+          <button onClick={() => setShowUpscaleOptions(true)} className="aw-pill text-xs py-1.5 px-3">✦ Upscale</button>
         </div>
       </div>
 
-      {/* V6 Pop-over Resolution Picker Overlay */}
+      {/* Pop-over Resolution Picker Overlay matching HTML */}
       {showUpscaleOptions && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 shadow-xl border border-studio-border max-w-sm w-full animate-slide-up flex flex-col gap-4 text-studio-text">
-            <div className="space-y-1">
-              <h4 className="font-display text-sm font-semibold uppercase tracking-wider text-studio-text">In-Context Quick Upscaler</h4>
-              <p className="text-studio-muted text-xs">
-                Enhance details and sharpen current results instantly without leaving your current workspace.
-              </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center font-body">
+            <div className="modal-overlay absolute inset-0" onClick={() => setShowUpscaleOptions(false)}></div>
+            <div className="absolute inset-x-4 top-[15%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[400px] bg-studio-bg border border-studio-border-light rounded-2xl shadow-2xl p-6 animate-fade-in z-10 text-studio-text">
+                <h3 className="font-display font-semibold text-lg mb-1">Upscale Resolution</h3>
+                <p className="text-studio-muted text-sm mb-6">Select output scale multiplier</p>
+                <div className="flex gap-3 mb-6">
+                    {[2, 3, 4].map(f => (
+                        <button
+                            key={f}
+                            onClick={() => setUpscaleFactor(f)}
+                            className={`upscale-option flex-1 py-4 border rounded-xl text-center transition-colors ${upscaleFactor === f ? 'border-studio-text bg-studio-elevated' : 'border-studio-border-light hover:border-studio-text'}`}
+                        >
+                            <span className="font-display font-semibold text-lg">{f}×</span>
+                            <span className="block text-xs text-studio-muted mt-1">{f === 2 ? 'Standard' : f === 3 ? 'High' : 'Ultra'}</span>
+                        </button>
+                    ))}
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={handleQuickUpscale} className="aw-btn flex-1 py-3 rounded-xl text-sm">Upscale</button>
+                    <button onClick={() => setShowUpscaleOptions(false)} className="aw-btn-outline flex-1 py-3 rounded-xl text-sm">Cancel</button>
+                </div>
             </div>
-            
-            <div className="flex gap-3 my-2">
-              {[2, 3, 4].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setUpscaleFactor(f)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-mono font-medium transition-colors ${
-                    upscaleFactor === f 
-                      ? 'bg-studio-accent text-white font-semibold shadow-md' 
-                      : 'bg-studio-surface border border-studio-border-light hover:bg-neutral-100 hover:text-studio-text'
-                  }`}
-                >
-                  {f}x
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2 justify-end border-t border-studio-border-light pt-3 shrink-0">
-              <button 
-                onClick={() => setShowUpscaleOptions(false)} 
-                className="btn-outline px-4 py-1.5 rounded-full text-xs font-display"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleQuickUpscale} 
-                className="btn-primary px-4 py-1.5 rounded-full text-xs font-display"
-              >
-                Upscale
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

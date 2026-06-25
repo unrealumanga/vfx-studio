@@ -1,60 +1,42 @@
-import { useState } from 'react';
 import { useSessionStore } from '../../store/session.store';
-import ModelBadge from '../../components/ModelBadge/ModelBadge';
-import { pickAdapter } from '../../utils/router';
-import { useKeysStore } from '../../store/keys.store';
-import { assistPrompt, TEMPLATES, type TemplateKey } from './promptAssist.service';
 
 export default function PromptAssist() {
-  const { prompt, overrideProvider } = useSessionStore();
-  const keys = useKeysStore((s) => s.keys);
-  const [working, setWorking] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey | ''>('');
-
-  let resolved: string | null = null;
-  try {
-    const r = pickAdapter('prompt-assist', keys, overrideProvider);
-    resolved = r.provider;
-  } catch {
-    resolved = null;
-  }
-
-  const handleAssist = async () => {
-    if (!prompt.trim() || working) return;
-    setWorking(true);
-    await assistPrompt(selectedTemplate ? selectedTemplate : undefined);
-    setWorking(false);
-  };
+  const { setOverrideProvider } = useSessionStore();
 
   return (
-    <div className="space-y-3">
-      <ModelBadge currentProvider={resolved} />
-
-      <p className="text-studio-muted text-[10px] font-mono leading-relaxed">
-        Uses AI to expand your prompt into a detailed, cinematic description optimized for generation.
-      </p>
-
+    <div className="space-y-5">
+      
       <div>
-        <label className="text-studio-muted text-xs font-mono block mb-1">Amplification Template</label>
-        <select
-          value={selectedTemplate}
-          onChange={(e) => setSelectedTemplate(e.target.value as TemplateKey | '')}
-          className="w-full bg-studio-bg border border-studio-border rounded px-2 py-1.5 text-studio-text text-xs font-mono outline-none focus:border-studio-accent"
-        >
-          <option value="">Auto (Default)</option>
-          {Object.entries(TEMPLATES).map(([key, temp]) => (
-            <option key={key} value={key}>{temp.label}</option>
-          ))}
-        </select>
+          <label className="label block mb-3">Enhancement Style</label>
+          <div className="space-y-2">
+              <button className="prompt-style-btn aw-btn-outline w-full py-3 rounded-xl text-left px-4 text-sm active border-studio-text">
+                  <span className="font-medium">Descriptive</span>
+                  <span className="block text-xs text-studio-muted mt-0.5">Rich detail, atmospheric, cinematic</span>
+              </button>
+              <button className="prompt-style-btn aw-btn-outline w-full py-3 rounded-xl text-left px-4 text-sm border-studio-border-light">
+                  <span className="font-medium">Technical</span>
+                  <span className="block text-xs text-studio-muted mt-0.5">Precise, structured, parameter-focused</span>
+              </button>
+              <button className="prompt-style-btn aw-btn-outline w-full py-3 rounded-xl text-left px-4 text-sm border-studio-border-light">
+                  <span className="font-medium">Concise</span>
+                  <span className="block text-xs text-studio-muted mt-0.5">Short, punchy, keyword-optimized</span>
+              </button>
+          </div>
       </div>
 
-      <button
-        onClick={handleAssist}
-        disabled={!prompt.trim() || working}
-        className="interactive-btn w-full bg-studio-accent hover:bg-studio-accent-dim disabled:opacity-40 text-white font-display font-medium text-sm py-2 rounded-full transition-colors shadow-[0_4px_15px_rgba(124,109,255,0.3)]"
-      >
-        {working ? 'Amplifying...' : '✦ Expand Prompt'}
-      </button>
+      <div>
+          <label className="label block mb-3">Target Model</label>
+          <select 
+            onChange={(e) => setOverrideProvider(e.target.value)}
+            className="aw-input w-full px-4 py-3 rounded-xl text-sm appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e')] bg-no-repeat bg-[right_1rem_center] bg-[length:1rem]"
+          >
+              <option value="">Auto</option>
+              <option value="openai">DALL-E 3</option>
+              <option value="google">Gemini</option>
+              <option value="replicate">Flux / SDXL</option>
+          </select>
+      </div>
+
     </div>
   );
 }

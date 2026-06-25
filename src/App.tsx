@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { Task } from './adapters/_base';
 import ToolSwitcher from './components/ToolSwitcher/ToolSwitcher';
 import PromptBar from './components/PromptBar/PromptBar';
 import ResultCanvas from './components/ResultCanvas/ResultCanvas';
@@ -19,9 +20,21 @@ import { editImage } from './modules/image-edit/imageEdit.service';
 import { generateVideo } from './modules/video-gen/videoGen.service';
 import { generateVfx } from './modules/vfx-compose/vfxCompose.service';
 
+const TOOL_CONFIG: Record<Task, { label: string; title: string }> = {
+  'image-gen': { label: '// Image Generation', title: 'Create' },
+  'image-edit': { label: '// Image Editing', title: 'Refine' },
+  'video-gen': { label: '// Video Generation', title: 'Animate' },
+  'vfx-compose': { label: '// VFX Composition', title: 'Compose' },
+  'archviz': { label: '// Architectural Visualization', title: 'Build' },
+  'upscale': { label: '// Image Upscaling', title: 'Enhance' },
+  'prompt-assist': { label: '// Prompt Assistant', title: 'Refine' },
+  'style-transfer': { label: '// Style Transfer', title: 'Transfer' },
+};
+
 function App() {
   const [keyVaultOpen, setKeyVaultOpen] = useState(false);
-  const { activeTask } = useSessionStore();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { activeTask, setActiveTask } = useSessionStore();
   const { availableProviders } = useKeysStore();
   const initPromptStore = usePromptStore(s => s.init);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -38,6 +51,7 @@ function App() {
       case 'image-edit':   editImage(); break;
       case 'video-gen':    generateVideo(); break;
       case 'vfx-compose':  generateVfx(); break;
+      case 'archviz':      break;
     }
   };
 
@@ -55,68 +69,101 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col md:h-screen bg-studio-bg text-studio-text md:overflow-hidden select-none font-body min-h-screen">
-      {/* 1. Header Navigation */}
-      <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />
+    <div id="app" className="flex flex-col min-h-screen bg-studio-bg text-studio-text overflow-x-hidden font-body">
+      {/* Header */}
+      <ToolSwitcher 
+        onOpenKeys={() => setKeyVaultOpen(true)} 
+        onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)} 
+      />
 
-      {/* 2. Main Centered Workspace Area */}
-      <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 md:min-h-0 md:overflow-hidden">
-        {/* Left/Main Column: Result Display or Canvas masking */}
-        <div className="flex-1 flat-panel rounded-xl overflow-hidden relative flex flex-col min-h-0 bg-studio-surface border border-studio-border">
-          <ResultCanvas />
+      {/* Mobile Navigation Sheet */}
+      {mobileNavOpen && (
+        <div id="mobileNav" className="fixed inset-0 z-50">
+            <div className="modal-overlay absolute inset-0" onClick={() => setMobileNavOpen(false)}></div>
+            <div className="absolute top-14 left-0 right-0 bg-studio-bg border-b border-studio-border-light p-6 animate-fade-in">
+                <div className="flex flex-col gap-1">
+                    {(['image-gen', 'image-edit', 'video-gen', 'vfx-compose', 'archviz', 'upscale', 'prompt-assist'] as Task[]).map((tool) => (
+                      <button 
+                        key={tool}
+                        onClick={() => { setActiveTask(tool); setMobileNavOpen(false); }}
+                        className={`aw-tab text-left px-3 py-3 text-base ${activeTask === tool ? 'active' : ''}`}
+                      >
+                        {TOOL_CONFIG[tool].title}
+                      </button>
+                    ))}
+                </div>
+                <div className="mt-6 pt-6 border-t border-studio-border-light">
+                    <button onClick={() => { setKeyVaultOpen(true); setMobileNavOpen(false); }} className="aw-btn-outline w-full py-3 rounded-full text-sm">Configure API Keys</button>
+                </div>
+            </div>
         </div>
+      )}
 
-        {/* Right Column: Parameters Panel (Collapsible) */}
-        <div className={`w-full shrink-0 transition-all duration-300 md:h-full flex flex-col ${panelCollapsed ? 'md:w-16 h-12 md:h-full' : 'md:w-64'}`}>
-          <div className="flex-1 flat-panel rounded-xl p-4 overflow-y-auto bg-studio-surface border border-studio-border flex flex-col gap-4">
-            
-            {/* Header control with collapse toggle */}
-            <div className="flex items-center justify-between border-b border-studio-border-light pb-2 shrink-0">
-              <h3 className={`font-display font-semibold text-xs tracking-wider text-studio-muted uppercase ${panelCollapsed ? 'hidden' : ''}`}>
-                // Parameters
-              </h3>
-              <button
-                onClick={() => setPanelCollapsed(!panelCollapsed)}
-                className="text-studio-muted hover:text-studio-accent font-mono text-sm leading-none p-1 hover:bg-studio-border rounded transition-colors"
-                title={panelCollapsed ? "Expand side controls" : "Collapse side controls"}
-              >
-                {panelCollapsed ? '▸' : '◂'}
-              </button>
+      {/* Main Content */}
+      <main className="flex-1 pt-14 pb-[140px] md:pb-[100px] flex flex-col md:flex-row md:h-screen md:overflow-hidden relative z-10">
+        
+        {/* Left: Workspace / Canvas */}
+        <section className="flex-1 flex flex-col min-h-0 relative">
+          
+          {/* Tool Title Bar */}
+          <div className="px-6 pt-6 pb-2 flex items-end justify-between shrink-0">
+            <div>
+                <p className="label mb-1" id="toolLabel">{TOOL_CONFIG[activeTask].label}</p>
+                <h1 className="display-lg text-2xl md:text-3xl" id="toolTitle">{TOOL_CONFIG[activeTask].title}</h1>
             </div>
+          </div>
+
+          {/* Canvas / Result Area */}
+          <div className="flex-1 min-h-[300px] px-6 pb-4 overflow-y-auto scrollbar-none flex flex-col">
+            <ResultCanvas />
+          </div>
+
+          {/* History Strip */}
+          <div className="px-6 pb-4 shrink-0">
+            <HistoryStrip />
+          </div>
+
+        </section>
+
+        {/* Right: Parameters Panel */}
+        <aside 
+          className={`w-full shrink-0 border-t md:border-t-0 md:border-l border-studio-border-light bg-studio-bg md:bg-transparent overflow-y-auto scrollbar-none transition-all duration-300 ${panelCollapsed ? 'md:w-16 h-12 md:h-full' : 'md:w-80 lg:w-96'}`}
+        >
+          <div className={`p-6 md:p-6 md:pt-20 ${panelCollapsed ? 'md:px-2' : ''}`}>
             
-            {/* Controls body */}
-            <div className={`flex-1 min-h-0 ${panelCollapsed ? 'hidden' : 'flex flex-col'}`}>
-              {renderModuleControls()}
+            {/* Collapse toggle (desktop) */}
+            <div className="hidden md:flex items-center justify-between mb-6">
+                <span className={`label ${panelCollapsed ? 'hidden' : ''}`}>Parameters</span>
+                <button onClick={() => setPanelCollapsed(!panelCollapsed)} className="text-studio-muted hover:text-studio-text transition-colors p-1 mx-auto" title="Toggle Panel">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ transform: panelCollapsed ? 'rotate(180deg)' : 'none' }}>
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                </button>
             </div>
-            
-            {/* Collapsed placeholder indicator */}
+
+            <div id="toolControls" className={`space-y-6 animate-fade-in ${panelCollapsed ? 'hidden' : ''}`}>
+                {renderModuleControls()}
+            </div>
+
             {panelCollapsed && (
               <div 
                 onClick={() => setPanelCollapsed(false)}
-                className="hidden md:flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer text-studio-faded hover:text-studio-accent transition-colors"
-                title="Expand side controls"
+                className="hidden md:flex flex-1 flex-col items-center justify-center gap-1 mt-10 cursor-pointer text-studio-faded hover:text-studio-accent transition-colors"
               >
                 <div className="text-xs tracking-widest font-mono uppercase [writing-mode:vertical-lr] select-none opacity-50">
-                  Settings
+                  Controls
                 </div>
               </div>
             )}
-
           </div>
-        </div>
-      </div>
+        </aside>
 
-      {/* 3. History timeline strip */}
-      <div className="px-6 pb-2">
-        <HistoryStrip />
-      </div>
+      </main>
 
-      {/* 4. Bottom fixed/centered Prompt Input Bar */}
-      <div className="px-6 pb-6 pt-2 w-full max-w-4xl mx-auto shrink-0">
-        <PromptBar onGenerate={handleGenerate} />
-      </div>
+      {/* Bottom Prompt Bar */}
+      <PromptBar onGenerate={handleGenerate} />
 
-      {/* 5. Key Decryption Settings Panel */}
+      {/* Modals */}
       <KeyVault open={keyVaultOpen} onClose={() => setKeyVaultOpen(false)} />
     </div>
   );

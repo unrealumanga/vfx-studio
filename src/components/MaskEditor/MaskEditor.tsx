@@ -13,7 +13,6 @@ export default function MaskEditor() {
   const [tool, setTool] = useState<'brush' | 'rect'>('brush');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // Load reference image blob as local object URL
   useEffect(() => {
     if (referenceImage) {
       const url = URL.createObjectURL(referenceImage);
@@ -24,7 +23,6 @@ export default function MaskEditor() {
     }
   }, [referenceImage]);
 
-  // Initialize fabric drawing canvas over image background
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current || !imageUrl) return;
 
@@ -34,16 +32,14 @@ export default function MaskEditor() {
       const initCanvas = () => {
         if (!containerRef.current || !canvasRef.current) return;
 
-        const containerWidth = containerRef.current.clientWidth;
-        const containerHeight = containerRef.current.clientHeight;
+        const containerWidth = containerRef.current.clientWidth - 32; // match HTML padding assumption
+        const containerHeight = containerRef.current.clientHeight - 32;
 
-        // If the container is collapsed during responsive reflows, wait for the next frame
-        if (containerWidth === 0 || containerHeight === 0) {
+        if (containerWidth <= 0 || containerHeight <= 0) {
           requestAnimationFrame(initCanvas);
           return;
         }
 
-        // Fit image proportionally within container
         const scaleX = containerWidth / imgElement.width;
         const scaleY = containerHeight / imgElement.height;
         const scale = Math.min(scaleX, scaleY, 1) * 0.95;
@@ -54,17 +50,15 @@ export default function MaskEditor() {
         const fCanvas = new Canvas(canvasRef.current!, {
           width: canvasWidth,
           height: canvasHeight,
-          isDrawingMode: tool === 'brush', // enable drawing mode ONLY for brush tool
+          isDrawingMode: tool === 'brush',
+          backgroundColor: '#ffffff'
         });
 
-        // Set up the brush
         const brush = new PencilBrush(fCanvas);
-        // Visible mask styling: black stroke draws over white canvas, eraser uses white to overwrite
         brush.color = brushMode === 'draw' ? '#000000' : '#ffffff';
         brush.width = brushSize;
         fCanvas.freeDrawingBrush = brush;
 
-        // Load reference image as non-selectable static background layer aligned at (0, 0)
         FabricImage.fromURL(imageUrl).then((fImg) => {
           fImg.set({
             scaleX: scale,
@@ -81,14 +75,12 @@ export default function MaskEditor() {
         });
 
         fabricRef.current = fCanvas;
-        fCanvas.calcOffset(); // Recalculate container offsets immediately
+        fCanvas.calcOffset();
 
-        // Sync mask updates dynamically on stroke completion
         fCanvas.on('path:created', () => {
           updateMask(fCanvas);
         });
 
-        // Handle custom rectangular selection tool dragging
         let rect: Rect | null = null;
         let isDragging = false;
         let startX = 0;
@@ -107,10 +99,9 @@ export default function MaskEditor() {
             height: 0,
             originX: 'left',
             originY: 'top',
-            // Semi-transparent overlay with dotted marching-ants border
-            fill: brushMode === 'draw' ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.8)',
+            fill: brushMode === 'draw' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
             stroke: brushMode === 'draw' ? '#000000' : '#ffffff',
-            strokeWidth: 1.5,
+            strokeWidth: 1,
             strokeDashArray: [4, 4],
             selectable: false,
             evented: false,
@@ -140,7 +131,6 @@ export default function MaskEditor() {
           if (!isDragging) return;
           isDragging = false;
           if (rect) {
-            // Flatten rect style on draw end
             rect.set({
               strokeDashArray: undefined,
               fill: brushMode === 'draw' ? '#000000' : '#ffffff',
@@ -162,7 +152,6 @@ export default function MaskEditor() {
     };
   }, [imageUrl, tool]);
 
-  // Sync brush changes dynamically when state dependencies update
   useEffect(() => {
     const fCanvas = fabricRef.current;
     if (fCanvas && fCanvas.freeDrawingBrush) {
@@ -171,18 +160,15 @@ export default function MaskEditor() {
     }
   }, [brushSize, brushMode]);
 
-  // Generate clean, high-precision binary mask image
   const updateMask = (canvasInstance: Canvas) => {
     const originalBgImage = canvasInstance.backgroundImage;
     
-    // Hide visual background layer and set white canvas backdrop to isolate black mask strokes
     canvasInstance.backgroundImage = undefined as any;
     canvasInstance.backgroundColor = '#ffffff';
     canvasInstance.renderAll();
 
     const dataUrl = canvasInstance.toDataURL({ format: 'png', multiplier: 1 });
 
-    // Restore background layers instantly
     canvasInstance.backgroundImage = originalBgImage;
     canvasInstance.backgroundColor = '';
     canvasInstance.renderAll();
@@ -209,106 +195,79 @@ export default function MaskEditor() {
     }
   };
 
+  const btnBase = "px-3 py-1 rounded-full text-[10px] font-display font-medium uppercase tracking-wider transition-colors";
+
   return (
-    <div ref={containerRef} className="w-full h-full flex flex-col justify-center items-center relative p-6 select-none bg-neutral-950 dark:bg-neutral-900">
+    <div ref={containerRef} className="w-full h-full relative">
       
-      {/* ── Toolbar Brush Controls Overlaid atop Canvas ── */}
-      <div className="absolute top-4 left-4 right-4 z-40 flex flex-wrap items-center justify-between gap-3 bg-neutral-900/90 dark:bg-neutral-800/90 backdrop-blur-md border border-neutral-800 dark:border-neutral-700 rounded-full py-2 px-5 shadow-lg">
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest">// Masking workspace</span>
-          <div className="h-4 w-px bg-neutral-800 dark:bg-neutral-700" />
-          
-          {/* Draw/Erase toggle */}
-          <div className="flex bg-neutral-950 dark:bg-neutral-900 p-1 rounded-full border border-neutral-800 dark:border-neutral-700">
-            <button
-              onClick={() => setBrushMode('draw')}
-              className={`px-3 py-1 rounded-full text-[10px] font-display font-medium uppercase tracking-wider transition-colors ${
-                brushMode === 'draw' ? 'bg-studio-accent text-white' : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Draw
-            </button>
-            <button
-              onClick={() => setBrushMode('erase')}
-              className={`px-3 py-1 rounded-full text-[10px] font-display font-medium uppercase tracking-wider transition-colors ${
-                brushMode === 'erase' ? 'bg-studio-accent text-white' : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Erase
-            </button>
-          </div>
-
-          <div className="h-4 w-px bg-neutral-800 dark:bg-neutral-700" />
-
-          {/* Brush/Rectangle Tool select toggle */}
-          <div className="flex bg-neutral-950 dark:bg-neutral-900 p-1 rounded-full border border-neutral-800 dark:border-neutral-700">
-            <button
-              onClick={() => setTool('brush')}
-              className={`px-3 py-1 rounded-full text-[10px] font-display font-medium uppercase tracking-wider transition-colors ${
-                tool === 'brush' ? 'bg-studio-accent text-white' : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Brush
-            </button>
-            <button
-              onClick={() => setTool('rect')}
-              className={`px-3 py-1 rounded-full text-[10px] font-display font-medium uppercase tracking-wider transition-colors ${
-                tool === 'rect' ? 'bg-studio-accent text-white' : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Rect
-            </button>
-          </div>
-        </div>
-
-        {/* Brush Size Slider */}
-        <div className="flex items-center gap-3">
-          {tool === 'brush' && (
-            <>
-              <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">Size: {brushSize}px</span>
-              <input
-                type="range"
-                min="5"
-                max="120"
-                value={brushSize}
-                onChange={(e) => setBrushSize(Number(e.target.value))}
-                className="w-24 accent-studio-accent h-1 bg-neutral-800 dark:bg-neutral-700 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="h-4 w-px bg-neutral-800 dark:bg-neutral-700" />
-            </>
-          )}
-          
-          {/* Actions */}
-          <button
-            onClick={handleClearMask}
-            className="px-3 py-1 border border-neutral-800 dark:border-neutral-700 hover:border-neutral-500 rounded-full text-[10px] text-neutral-300 font-display font-medium uppercase tracking-wider transition-colors"
-          >
-            Clear
-          </button>
-          
-          <button
-            onClick={() => {
-              setReferenceImage(null);
-              setMaskImage(null);
-            }}
-            className="px-3 py-1 bg-neutral-800 dark:bg-neutral-700 hover:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-200 rounded-full text-[10px] font-display font-medium uppercase tracking-wider transition-colors"
-          >
-            Exit
-          </button>
-        </div>
-      </div>
-
-      {/* ── Visual Drawing Canvas Area ── */}
-      <div className="mask-canvas-container flex items-center justify-center pointer-events-auto">
+      {/* Mask Canvas Container */}
+      <div id="maskCanvasContainer" className="w-full h-full flex items-center justify-center p-4">
         <canvas ref={canvasRef} />
       </div>
 
-      {/* ── Info footer help ── */}
-      <div className="absolute bottom-4 left-4 pointer-events-none">
-        <p className="text-[10px] font-mono text-neutral-500">
-          * Mask strokes are drawn in visible dark ink and saved dynamically. Press Generate below to render edits.
-        </p>
+      {/* Mask Toolbar */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-2 bg-studio-bg/90 backdrop-blur-md border border-studio-border-light rounded-full py-2 px-4 shadow-sm">
+        
+        <div className="flex items-center gap-2">
+            <span className="label">Mask</span>
+            <div className="h-3 w-px bg-studio-border-light"></div>
+            
+            {/* Draw/Erase */}
+            <div className="flex bg-studio-elevated p-0.5 rounded-full border border-studio-border-light">
+                <button
+                    onClick={() => setBrushMode('draw')}
+                    className={`${btnBase} ${brushMode === 'draw' ? 'bg-studio-accent text-white' : 'text-studio-muted hover:text-studio-text'}`}
+                >Draw</button>
+                <button
+                    onClick={() => setBrushMode('erase')}
+                    className={`${btnBase} ${brushMode === 'erase' ? 'bg-studio-accent text-white' : 'text-studio-muted hover:text-studio-text'}`}
+                >Erase</button>
+            </div>
+            
+            {/* Brush/Rect */}
+            <div className="flex bg-studio-elevated p-0.5 rounded-full border border-studio-border-light">
+                <button
+                    onClick={() => setTool('brush')}
+                    className={`${btnBase} ${tool === 'brush' ? 'bg-studio-accent text-white' : 'text-studio-muted hover:text-studio-text'}`}
+                >Brush</button>
+                <button
+                    onClick={() => setTool('rect')}
+                    className={`${btnBase} ${tool === 'rect' ? 'bg-studio-accent text-white' : 'text-studio-muted hover:text-studio-text'}`}
+                >Rect</button>
+            </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+            {tool === 'brush' && (
+              <>
+                <span className="label">{brushSize}px</span>
+                <input 
+                    type="range" 
+                    min="5" 
+                    max="120" 
+                    value={brushSize} 
+                    onChange={(e) => setBrushSize(Number(e.target.value))}
+                    className="w-20"
+                />
+                <div className="h-3 w-px bg-studio-border-light"></div>
+              </>
+            )}
+            
+            <button onClick={handleClearMask} className="text-[10px] font-display uppercase tracking-wider text-studio-muted hover:text-studio-text transition-colors px-2">Clear</button>
+            <button 
+                onClick={() => {
+                    setReferenceImage(null);
+                    setMaskImage(null);
+                    // Stay in image-edit or switch to image-gen?
+                }} 
+                className="text-[10px] font-display uppercase tracking-wider text-studio-muted hover:text-studio-danger transition-colors px-2"
+            >
+              Exit
+            </button>
+        </div>
+
       </div>
+
     </div>
   );
 }
