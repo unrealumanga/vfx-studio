@@ -55,12 +55,12 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen h-screen bg-studio-bg text-studio-text overflow-hidden select-none font-body">
+    <div className="flex flex-col md:h-screen bg-studio-bg text-studio-text md:overflow-hidden select-none font-body min-h-screen">
       {/* 1. Header Navigation */}
       <ToolSwitcher onOpenKeys={() => setKeyVaultOpen(true)} />
 
       {/* 2. Main Centered Workspace Area */}
-      <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 md:min-h-0 md:overflow-hidden">
         {/* Left/Main Column: Result Display or Canvas masking */}
         <div className="flex-1 flat-panel rounded-xl overflow-hidden relative flex flex-col min-h-0 bg-studio-surface border border-studio-border">
           <ResultCanvas />

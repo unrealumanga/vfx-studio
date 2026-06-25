@@ -31,109 +31,129 @@ export default function MaskEditor() {
     const imgElement = document.createElement('img');
     imgElement.src = imageUrl;
     imgElement.onload = () => {
-      if (!containerRef.current || !canvasRef.current) return;
+      const initCanvas = () => {
+        if (!containerRef.current || !canvasRef.current) return;
 
-      const containerWidth = containerRef.current.clientWidth;
-      const containerHeight = containerRef.current.clientHeight;
+        const containerWidth = containerRef.current.clientWidth;
+        const containerHeight = containerRef.current.clientHeight;
 
-      // Fit image proportionally within container
-      const scaleX = containerWidth / imgElement.width;
-      const scaleY = containerHeight / imgElement.height;
-      const scale = Math.min(scaleX, scaleY, 1) * 0.95;
-
-      const canvasWidth = imgElement.width * scale;
-      const canvasHeight = imgElement.height * scale;
-
-      const fCanvas = new Canvas(canvasRef.current!, {
-        width: canvasWidth,
-        height: canvasHeight,
-        isDrawingMode: tool === 'brush', // enable drawing mode ONLY for brush tool
-      });
-
-      // Set up the brush
-      const brush = new PencilBrush(fCanvas);
-      // Visible mask styling: black stroke draws over white canvas, eraser uses white to overwrite
-      brush.color = brushMode === 'draw' ? '#000000' : '#ffffff';
-      brush.width = brushSize;
-      fCanvas.freeDrawingBrush = brush;
-
-      // Load reference image as non-selectable static background layer
-      FabricImage.fromURL(imageUrl).then((fImg) => {
-        fImg.scale(scale);
-        fCanvas.backgroundImage = fImg;
-        fCanvas.renderAll();
-        fImg.selectable = false;
-        fImg.evented = false;
-      });
-
-      fabricRef.current = fCanvas;
-
-      // Sync mask updates dynamically on stroke completion
-      fCanvas.on('path:created', () => {
-        updateMask(fCanvas);
-      });
-
-      // Handle custom rectangular selection tool dragging
-      let rect: Rect | null = null;
-      let isDragging = false;
-      let startX = 0;
-      let startY = 0;
-
-      fCanvas.on('mouse:down', (opt) => {
-        if (tool !== 'rect' || !opt.scenePoint) return;
-        isDragging = true;
-        startX = opt.scenePoint.x;
-        startY = opt.scenePoint.y;
-
-        rect = new Rect({
-          left: startX,
-          top: startY,
-          width: 0,
-          height: 0,
-          // Semi-transparent overlay with dotted marching-ants border
-          fill: brushMode === 'draw' ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.8)',
-          stroke: brushMode === 'draw' ? '#000000' : '#ffffff',
-          strokeWidth: 1.5,
-          strokeDashArray: [4, 4],
-          selectable: false,
-          evented: false,
-        });
-
-        fCanvas.add(rect);
-        fCanvas.renderAll();
-      });
-
-      fCanvas.on('mouse:move', (opt) => {
-        if (!isDragging || !rect || !opt.scenePoint) return;
-        
-        const currentX = opt.scenePoint.x;
-        const currentY = opt.scenePoint.y;
-
-        rect.set({
-          width: Math.abs(currentX - startX),
-          height: Math.abs(currentY - startY),
-          left: Math.min(startX, currentX),
-          top: Math.min(startY, currentY),
-        });
-
-        fCanvas.renderAll();
-      });
-
-      fCanvas.on('mouse:up', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        if (rect) {
-          // Flatten rect style on draw end
-          rect.set({
-            strokeDashArray: undefined,
-            fill: brushMode === 'draw' ? '#000000' : '#ffffff',
-            stroke: brushMode === 'draw' ? '#000000' : '#ffffff',
-          });
-          rect = null;
+        // If the container is collapsed during responsive reflows, wait for the next frame
+        if (containerWidth === 0 || containerHeight === 0) {
+          requestAnimationFrame(initCanvas);
+          return;
         }
-        fCanvas.renderAll();
-        updateMask(fCanvas);
-      });
+
+        // Fit image proportionally within container
+        const scaleX = containerWidth / imgElement.width;
+        const scaleY = containerHeight / imgElement.height;
+        const scale = Math.min(scaleX, scaleY, 1) * 0.95;
+
+        const canvasWidth = imgElement.width * scale;
+        const canvasHeight = imgElement.height * scale;
+
+        const fCanvas = new Canvas(canvasRef.current!, {
+          width: canvasWidth,
+          height: canvasHeight,
+          isDrawingMode: tool === 'brush', // enable drawing mode ONLY for brush tool
+        });
+
+        // Set up the brush
+        const brush = new PencilBrush(fCanvas);
+        // Visible mask styling: black stroke draws over white canvas, eraser uses white to overwrite
+        brush.color = brushMode === 'draw' ? '#000000' : '#ffffff';
+        brush.width = brushSize;
+        fCanvas.freeDrawingBrush = brush;
+
+        // Load reference image as non-selectable static background layer aligned at (0, 0)
+        FabricImage.fromURL(imageUrl).then((fImg) => {
+          fImg.set({
+            scaleX: scale,
+            scaleY: scale,
+            left: 0,
+            top: 0,
+            originX: 'left',
+            originY: 'top',
+            selectable: false,
+            evented: false,
+          });
+          fCanvas.backgroundImage = fImg;
+          fCanvas.renderAll();
+        });
+
+        fabricRef.current = fCanvas;
+        fCanvas.calcOffset(); // Recalculate container offsets immediately
+
+        // Sync mask updates dynamically on stroke completion
+        fCanvas.on('path:created', () => {
+          updateMask(fCanvas);
+        });
+
+        // Handle custom rectangular selection tool dragging
+        let rect: Rect | null = null;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        fCanvas.on('mouse:down', (opt) => {
+          if (tool !== 'rect' || !opt.scenePoint) return;
+          isDragging = true;
+          startX = opt.scenePoint.x;
+          startY = opt.scenePoint.y;
+
+          rect = new Rect({
+            left: startX,
+            top: startY,
+            width: 0,
+            height: 0,
+            originX: 'left',
+            originY: 'top',
+            // Semi-transparent overlay with dotted marching-ants border
+            fill: brushMode === 'draw' ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.8)',
+            stroke: brushMode === 'draw' ? '#000000' : '#ffffff',
+            strokeWidth: 1.5,
+            strokeDashArray: [4, 4],
+            selectable: false,
+            evented: false,
+          });
+
+          fCanvas.add(rect);
+          fCanvas.renderAll();
+        });
+
+        fCanvas.on('mouse:move', (opt) => {
+          if (!isDragging || !rect || !opt.scenePoint) return;
+          
+          const currentX = opt.scenePoint.x;
+          const currentY = opt.scenePoint.y;
+
+          rect.set({
+            width: Math.abs(currentX - startX),
+            height: Math.abs(currentY - startY),
+            left: Math.min(startX, currentX),
+            top: Math.min(startY, currentY),
+          });
+
+          fCanvas.renderAll();
+        });
+
+        fCanvas.on('mouse:up', () => {
+          if (!isDragging) return;
+          isDragging = false;
+          if (rect) {
+            // Flatten rect style on draw end
+            rect.set({
+              strokeDashArray: undefined,
+              fill: brushMode === 'draw' ? '#000000' : '#ffffff',
+              stroke: brushMode === 'draw' ? '#000000' : '#ffffff',
+            });
+            rect = null;
+          }
+          fCanvas.renderAll();
+          updateMask(fCanvas);
+        });
+      };
+
+      initCanvas();
     };
 
     return () => {

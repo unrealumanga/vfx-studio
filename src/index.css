@@ -203,9 +203,13 @@ a, button, select, input, textarea, [role="button"] { cursor: pointer !important
 }
 
 /* ── Fabric Mask Canvas Sizing ────────────────────────────────── */
-.mask-canvas-container canvas {
+.mask-canvas-container canvas,
+.canvas-container,
+.canvas-container canvas {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-radius: 0.5rem;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 /* ── Modern Spinner ───────────────────────────────────────────── */
