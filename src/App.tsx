@@ -19,6 +19,9 @@ import { generateImage } from './modules/image-gen/imageGen.service';
 import { editImage } from './modules/image-edit/imageEdit.service';
 import { generateVideo } from './modules/video-gen/videoGen.service';
 import { generateVfx } from './modules/vfx-compose/vfxCompose.service';
+import { generateArchViz } from './modules/archviz/archviz.service';
+import { upscaleImage } from './modules/upscale/upscale.service';
+import { assistPrompt } from './modules/prompt-assist/promptAssist.service';
 
 const TOOL_CONFIG: Record<Task, { label: string; title: string }> = {
   'image-gen': { label: '// Image Generation', title: 'Create' },
@@ -47,11 +50,13 @@ function App() {
 
   const handleGenerate = () => {
     switch (activeTask) {
-      case 'image-gen':    generateImage(); break;
-      case 'image-edit':   editImage(); break;
-      case 'video-gen':    generateVideo(); break;
-      case 'vfx-compose':  generateVfx(); break;
-      case 'archviz':      break;
+      case 'image-gen':     generateImage(); break;
+      case 'image-edit':    editImage(); break;
+      case 'video-gen':     generateVideo(); break;
+      case 'vfx-compose':   generateVfx(); break;
+      case 'archviz':       generateArchViz(); break;
+      case 'upscale':       upscaleImage(); break;
+      case 'prompt-assist': assistPrompt(); break;
     }
   };
 
